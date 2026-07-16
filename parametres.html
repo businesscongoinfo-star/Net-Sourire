@@ -1,0 +1,397 @@
+<!DOCTYPE html>
+<html lang="fr">
+
+<head>
+
+<meta charset="UTF-8">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>Net Sourire | Paramètres</title>
+
+<link rel="stylesheet" href="dashboard.css">
+
+<link rel="stylesheet"
+href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css">
+
+</head>
+
+<body>
+
+<div class="dashboard">
+
+<!-- ===== SIDEBAR ===== -->
+
+<aside class="sidebar">
+
+<div class="sidebar-header">
+
+<img
+src="images/logo.png"
+class="sidebar-logo"
+alt="Net Sourire">
+
+<h2>
+
+NET SOURIRE
+
+</h2>
+
+</div>
+
+<ul class="sidebar-menu">
+
+<li>
+
+<a href="dashboard.html">
+
+<i class="fa-solid fa-house"></i>
+
+Dashboard
+
+</a>
+
+</li>
+
+<li>
+
+<a href="patients.html">
+
+<i class="fa-solid fa-user-group"></i>
+
+Patients
+
+</a>
+
+</li>
+
+<li>
+
+<a href="rendezvous.html">
+
+<i class="fa-solid fa-calendar-check"></i>
+
+Rendez-vous
+
+</a>
+
+</li>
+
+<li>
+
+<a href="ordonnance.html">
+
+<i class="fa-solid fa-file-prescription"></i>
+
+Ordonnances
+
+</a>
+
+</li>
+
+<li>
+
+<a href="facture.html">
+
+<i class="fa-solid fa-file-invoice-dollar"></i>
+
+Factures
+
+</a>
+
+</li>
+
+<li>
+
+<a href="publications.html">
+
+<i class="fa-solid fa-images"></i>
+
+Publications
+
+</a>
+
+</li>
+
+<li class="active">
+
+<a href="parametres.html">
+
+<i class="fa-solid fa-gear"></i>
+
+Paramètres
+
+</a>
+
+</li>
+
+<li>
+
+<a href="#" onclick="deconnexion()">
+
+<i class="fa-solid fa-right-from-bracket"></i>
+
+Déconnexion
+
+</a>
+
+</li>
+
+</ul>
+
+</aside>
+
+<!-- ===== CONTENU ===== -->
+
+<main class="main-content">
+
+<header class="topbar">
+
+<div>
+
+<h1>
+
+Paramètres du Cabinet
+
+</h1>
+
+<p>
+
+Configurez les informations générales de votre cabinet dentaire.
+
+</p>
+
+</div>
+
+<button
+
+id="btnEnregistrerParametres"
+
+class="btn-primary">
+
+<i class="fa-solid fa-floppy-disk"></i>
+
+Enregistrer
+
+</button>
+
+</header>
+
+<section class="dashboard-box">
+
+<form id="parametresForm">
+
+<div class="form-grid">
+
+<div class="form-group">
+
+<label>Nom du cabinet</label>
+
+<input
+
+type="text"
+
+id="nomCabinet"
+
+placeholder="Cabinet Net Sourire">
+
+</div>
+
+<div class="form-group">
+
+<label>Nom du responsable</label>
+
+<input
+
+type="text"
+
+id="responsable">
+
+</div>
+
+<div class="form-group">
+
+<label>Téléphone</label>
+
+<input
+
+type="tel"
+
+id="telephoneCabinet">
+
+</div>
+
+<div class="form-group">
+
+<label>Email</label>
+
+<input
+
+type="email"
+
+id="emailCabinet">
+
+</div>
+
+<div class="form-group full-width">
+
+<label>Adresse</label>
+
+<input
+
+type="text"
+
+id="adresseCabinet">
+
+</div>
+<div class="form-group">
+
+<label>Ville</label>
+
+<input
+
+type="text"
+
+id="villeCabinet"
+
+placeholder="Pointe-Noire">
+
+</div>
+
+<div class="form-group">
+
+<label>Pays</label>
+
+<input
+
+type="text"
+
+id="paysCabinet"
+
+placeholder="République du Congo">
+
+</div>
+
+<div class="form-group">
+
+<label>Devise</label>
+
+<select id="devise">
+
+<option value="FCFA">FCFA</option>
+
+<option value="USD">USD</option>
+
+<option value="EUR">EUR</option>
+
+</select>
+
+</div>
+
+<div class="form-group">
+
+<label>Logo du cabinet</label>
+
+<input
+
+type="file"
+
+id="logoCabinet"
+
+accept="image/*">
+
+</div>
+
+<div class="form-group full-width">
+
+<label>Description</label>
+
+<textarea
+
+id="descriptionCabinet"
+
+rows="4"
+
+placeholder="Description du cabinet...">
+
+</textarea>
+
+</div>
+
+<div class="form-group full-width">
+
+<label>Horaires d'ouverture</label>
+
+<textarea
+
+id="horaires"
+
+rows="4"
+
+placeholder="Lundi - Vendredi : 08h00 - 18h00&#10;Samedi : 08h00 - 13h00">
+
+</textarea>
+
+</div>
+
+<div class="form-group full-width">
+
+<label>Conditions générales</label>
+
+<textarea
+
+id="conditions"
+
+rows="5"
+
+placeholder="Conditions générales du cabinet...">
+
+</textarea>
+
+</div>
+
+</div>
+
+<div class="modal-footer">
+
+<button
+
+type="reset"
+
+class="btn btn-secondary">
+
+Réinitialiser
+
+</button>
+
+<button
+
+type="submit"
+
+class="btn btn-primary">
+
+<i class="fa-solid fa-floppy-disk"></i>
+
+Enregistrer les paramètres
+
+</button>
+
+</div>
+
+</form>
+
+</section>
+
+</main>
+
+</div>
+
+<script type="module" src="firebase.js"></script>
+
+<script type="module" src="auth.js"></script>
+
+<script type="module" src="parametres.js"></script>
+
+</body>
+
+</html>

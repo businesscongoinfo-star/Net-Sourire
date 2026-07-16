@@ -1,0 +1,372 @@
+<!DOCTYPE html>
+<html lang="fr">
+
+<head>
+
+<meta charset="UTF-8">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>Net Sourire | Inscription Patient</title>
+
+<link rel="icon" href="images/logo.png">
+
+<link rel="stylesheet"
+href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css">
+
+<link rel="stylesheet" href="patient.css">
+
+</head>
+
+<body>
+
+<div class="patient-login">
+
+<!-- ==========================
+PARTIE GAUCHE
+========================== -->
+
+<div class="login-left">
+
+<div class="overlay"></div>
+
+<div class="left-content">
+
+<img
+src="images/logo.png"
+class="logo"
+alt="Net Sourire">
+
+<h1>
+
+INSCRIPTION PATIENT
+
+</h1>
+
+<p>
+
+Créez gratuitement votre compte Net Sourire afin de gérer vos rendez-vous, consulter vos ordonnances, télécharger vos factures et communiquer avec votre cabinet dentaire.
+
+</p>
+
+<div class="services">
+
+<div class="service">
+
+<i class="fa-solid fa-user-plus"></i>
+
+<span>Créer un compte</span>
+
+</div>
+
+<div class="service">
+
+<i class="fa-solid fa-calendar-plus"></i>
+
+<span>Prendre un rendez-vous</span>
+
+</div>
+
+<div class="service">
+
+<i class="fa-solid fa-file-medical"></i>
+
+<span>Mon dossier médical</span>
+
+</div>
+
+<div class="service">
+
+<i class="fa-solid fa-file-prescription"></i>
+
+<span>Mes ordonnances</span>
+
+</div>
+
+<div class="service">
+
+<i class="fa-solid fa-file-invoice-dollar"></i>
+
+<span>Mes factures</span>
+
+</div>
+
+<div class="service">
+
+<i class="fa-solid fa-bell"></i>
+
+<span>Notifications</span>
+
+</div>
+
+</div>
+
+</div>
+
+</div>
+
+<!-- ==========================
+FORMULAIRE
+========================== -->
+
+<div class="login-right">
+
+<div class="login-card">
+
+<h2>
+
+Créer un compte
+
+</h2>
+
+<p>
+
+Remplissez les informations ci-dessous.
+
+</p>
+
+<form id="patientRegisterForm">
+
+<div class="input-group">
+
+<i class="fa-solid fa-user"></i>
+
+<input
+
+type="text"
+
+id="nom"
+
+placeholder="Nom complet"
+
+required>
+
+</div>
+
+<div class="input-group">
+
+<i class="fa-solid fa-phone"></i>
+
+<input
+
+type="tel"
+
+id="telephone"
+
+placeholder="Téléphone"
+
+required>
+
+</div>
+
+<div class="input-group">
+
+<i class="fa-solid fa-envelope"></i>
+
+<input
+
+type="email"
+
+id="email"
+
+placeholder="Adresse e-mail"
+
+required>
+
+</div>
+
+<div class="input-group">
+
+<i class="fa-solid fa-lock"></i>
+
+<input
+
+type="password"
+
+id="password"
+
+placeholder="Mot de passe"
+
+required>
+
+</div>
+<div class="input-group">
+
+<i class="fa-solid fa-lock"></i>
+
+<input
+
+type="password"
+
+id="confirmPassword"
+
+placeholder="Confirmer le mot de passe"
+
+required>
+
+</div>
+
+<div class="options">
+
+<label class="remember">
+
+<input
+
+type="checkbox"
+
+id="acceptConditions"
+
+required>
+
+<span>
+
+J'accepte les conditions d'utilisation
+
+</span>
+
+</label>
+
+</div>
+
+<button
+
+type="submit"
+
+class="login-btn"
+
+id="btnRegister">
+
+<i class="fa-solid fa-user-plus"></i>
+
+Créer mon compte
+
+</button>
+
+<div
+
+id="registerMessage"
+
+class="login-message">
+
+</div>
+
+</form>
+
+<div class="divider">
+
+<span>
+
+OU
+
+</span>
+
+</div>
+
+<div class="register-box">
+
+<p>
+
+Vous possédez déjà un compte ?
+
+</p>
+
+<a
+
+href="patient-login.html"
+
+class="register-btn">
+
+<i class="fa-solid fa-right-to-bracket"></i>
+
+Se connecter
+
+</a>
+
+</div>
+
+<div class="back-home">
+
+<a href="index.html">
+
+<i class="fa-solid fa-house"></i>
+
+Retour au site
+
+</a>
+
+</div>
+<div class="security-info">
+
+<div class="security-item">
+
+<i class="fa-solid fa-shield-halved"></i>
+
+<div>
+
+<h4>
+
+Compte sécurisé
+
+</h4>
+
+<p>
+
+Toutes vos données personnelles sont protégées par Firebase Authentication.
+
+</p>
+
+</div>
+
+</div>
+
+<div class="security-item">
+
+<i class="fa-solid fa-user-doctor"></i>
+
+<div>
+
+<h4>
+
+Suivi de vos soins
+
+</h4>
+
+<p>
+
+Retrouvez vos rendez-vous, ordonnances, factures et notifications dans votre espace personnel.
+
+</p>
+
+</div>
+
+</div>
+
+</div>
+
+<div class="copyright">
+
+© 2026 Net Sourire - Tous droits réservés
+
+</div>
+
+</div>
+
+</div>
+
+<script type="module" src="firebase.js"></script>
+
+<script type="module" src="patient-register.js"></script>
+
+<script>
+
+window.addEventListener("load",()=>{
+
+document.getElementById("nom").focus();
+
+});
+
+</script>
+
+</body>
+
+</html>

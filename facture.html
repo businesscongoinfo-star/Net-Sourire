@@ -1,0 +1,438 @@
+<!DOCTYPE html>
+<html lang="fr">
+
+<head>
+
+<meta charset="UTF-8">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>Net Sourire | Factures</title>
+
+<link rel="stylesheet" href="dashboard.css">
+
+<link rel="stylesheet"
+href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css">
+
+</head>
+
+<body>
+
+<div class="dashboard">
+
+<!-- ===== SIDEBAR ===== -->
+
+<aside class="sidebar">
+
+<div class="sidebar-header">
+
+<img
+src="images/logo.png"
+class="sidebar-logo"
+alt="Net Sourire">
+
+<h2>
+
+NET SOURIRE
+
+</h2>
+
+</div>
+
+<ul class="sidebar-menu">
+
+<li>
+
+<a href="dashboard.html">
+
+<i class="fa-solid fa-house"></i>
+
+Dashboard
+
+</a>
+
+</li>
+
+<li>
+
+<a href="patients.html">
+
+<i class="fa-solid fa-user-group"></i>
+
+Patients
+
+</a>
+
+</li>
+
+<li>
+
+<a href="rendezvous.html">
+
+<i class="fa-solid fa-calendar-check"></i>
+
+Rendez-vous
+
+</a>
+
+</li>
+
+<li>
+
+<a href="ordonnance.html">
+
+<i class="fa-solid fa-file-prescription"></i>
+
+Ordonnances
+
+</a>
+
+</li>
+
+<li class="active">
+
+<a href="facture.html">
+
+<i class="fa-solid fa-file-invoice-dollar"></i>
+
+Factures
+
+</a>
+
+</li>
+
+<li>
+
+<a href="publications.html">
+
+<i class="fa-solid fa-images"></i>
+
+Publications
+
+</a>
+
+</li>
+
+<li>
+
+<a href="parametres.html">
+
+<i class="fa-solid fa-gear"></i>
+
+Paramètres
+
+</a>
+
+</li>
+
+<li>
+
+<a href="#" onclick="deconnexion()">
+
+<i class="fa-solid fa-right-from-bracket"></i>
+
+Déconnexion
+
+</a>
+
+</li>
+
+</ul>
+
+</aside>
+
+<!-- ===== CONTENU ===== -->
+
+<main class="main-content">
+
+<header class="topbar">
+
+<div>
+
+<h1>
+
+Gestion des Factures
+
+</h1>
+
+<p>
+
+Créer, gérer et imprimer les factures des patients.
+
+</p>
+
+</div>
+
+<button
+
+id="btnNouvelleFacture"
+
+class="btn-primary">
+
+<i class="fa-solid fa-file-circle-plus"></i>
+
+Nouvelle Facture
+
+</button>
+
+</header>
+
+<section class="dashboard-box">
+
+<div class="box-header">
+
+<div class="search-box">
+
+<i class="fa-solid fa-search"></i>
+
+<input
+
+type="text"
+
+id="rechercheFacture"
+
+placeholder="Rechercher une facture...">
+
+</div>
+<div class="table-responsive">
+
+<table class="table">
+
+<thead>
+
+<tr>
+
+<th>N° Facture</th>
+
+<th>Patient</th>
+
+<th>Service</th>
+
+<th>Montant</th>
+
+<th>Paiement</th>
+
+<th>Date</th>
+
+<th>Actions</th>
+
+</tr>
+
+</thead>
+
+<tbody id="facturesTable">
+
+<!-- Chargé automatiquement par facture.js -->
+
+</tbody>
+
+</table>
+
+</div>
+
+</section>
+
+<!-- ==========================
+MODAL NOUVELLE FACTURE
+========================== -->
+
+<div id="factureModal" class="modal">
+
+<div class="modal-content modal-large">
+
+<div class="modal-header">
+
+<h2>
+
+<i class="fa-solid fa-file-invoice-dollar"></i>
+
+Nouvelle Facture
+
+</h2>
+
+<span class="close" id="closeFactureModal">
+
+&times;
+
+</span>
+
+</div>
+
+<form id="factureForm">
+
+<div class="form-grid">
+
+<div class="form-group">
+
+<label>Nom du patient</label>
+
+<input
+type="text"
+id="patientNom"
+required>
+
+</div>
+
+<div class="form-group">
+
+<label>Téléphone</label>
+
+<input
+type="tel"
+id="patientTelephone">
+
+</div>
+
+<div class="form-group">
+
+<label>Service</label>
+
+<input
+type="text"
+id="service"
+required>
+
+</div>
+
+<div class="form-group">
+
+<label>Montant (FCFA)</label>
+
+<input
+type="number"
+id="montant"
+required>
+
+</div>
+
+<div class="form-group">
+
+<label>Mode de paiement</label>
+
+<select id="modePaiement">
+
+<option>Espèces</option>
+
+<option>Mobile Money</option>
+
+<option>Carte Bancaire</option>
+
+<option>Virement</option>
+
+</select>
+
+</div>
+
+<div class="form-group">
+
+<label>Date</label>
+
+<input
+type="date"
+id="dateFacture"
+required>
+
+</div>
+
+<div class="form-group full-width">
+
+<label>Observation</label>
+
+<textarea
+
+id="observation"
+
+rows="4"
+
+placeholder="Observation sur la facture...">
+
+</textarea>
+
+</div>
+<div class="modal-footer">
+
+<button
+
+type="button"
+
+class="btn btn-secondary"
+
+id="annulerFacture">
+
+Annuler
+
+</button>
+
+<button
+
+type="submit"
+
+class="btn btn-primary">
+
+<i class="fa-solid fa-floppy-disk"></i>
+
+Enregistrer la facture
+
+</button>
+
+</div>
+
+</form>
+
+</div>
+
+</div>
+
+<!-- ==========================
+DETAILS FACTURE
+========================== -->
+
+<div id="factureDetails" class="modal">
+
+<div class="modal-content modal-large">
+
+<div class="modal-header">
+
+<h2>
+
+<i class="fa-solid fa-file-invoice-dollar"></i>
+
+Détails de la Facture
+
+</h2>
+
+<span
+
+class="close"
+
+id="closeFactureDetails">
+
+&times;
+
+</span>
+
+</div>
+
+<div id="factureInfo">
+
+<!-- Chargé automatiquement par facture.js -->
+
+</div>
+
+</div>
+
+</div>
+
+</main>
+
+</div>
+
+<script type="module" src="firebase.js"></script>
+
+<script type="module" src="auth.js"></script>
+
+<script type="module" src="facture.js"></script>
+
+</body>
+
+</html>

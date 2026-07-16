@@ -1,0 +1,407 @@
+<!DOCTYPE html>
+<html lang="fr">
+
+<head>
+
+<meta charset="UTF-8">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>Net Sourire | Publications</title>
+
+<link rel="stylesheet" href="dashboard.css">
+
+<link rel="stylesheet"
+href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css">
+
+</head>
+
+<body>
+
+<div class="dashboard">
+
+<!-- ===== SIDEBAR ===== -->
+
+<aside class="sidebar">
+
+<div class="sidebar-header">
+
+<img
+src="images/logo.png"
+class="sidebar-logo"
+alt="Net Sourire">
+
+<h2>
+
+NET SOURIRE
+
+</h2>
+
+</div>
+
+<ul class="sidebar-menu">
+
+<li>
+
+<a href="dashboard.html">
+
+<i class="fa-solid fa-house"></i>
+
+Dashboard
+
+</a>
+
+</li>
+
+<li>
+
+<a href="patients.html">
+
+<i class="fa-solid fa-user-group"></i>
+
+Patients
+
+</a>
+
+</li>
+
+<li>
+
+<a href="rendezvous.html">
+
+<i class="fa-solid fa-calendar-check"></i>
+
+Rendez-vous
+
+</a>
+
+</li>
+
+<li>
+
+<a href="ordonnance.html">
+
+<i class="fa-solid fa-file-prescription"></i>
+
+Ordonnances
+
+</a>
+
+</li>
+
+<li>
+
+<a href="facture.html">
+
+<i class="fa-solid fa-file-invoice-dollar"></i>
+
+Factures
+
+</a>
+
+</li>
+
+<li class="active">
+
+<a href="publications.html">
+
+<i class="fa-solid fa-images"></i>
+
+Publications
+
+</a>
+
+</li>
+
+<li>
+
+<a href="parametres.html">
+
+<i class="fa-solid fa-gear"></i>
+
+Paramètres
+
+</a>
+
+</li>
+
+<li>
+
+<a href="#" onclick="deconnexion()">
+
+<i class="fa-solid fa-right-from-bracket"></i>
+
+Déconnexion
+
+</a>
+
+</li>
+
+</ul>
+
+</aside>
+
+<!-- ===== CONTENU ===== -->
+
+<main class="main-content">
+
+<header class="topbar">
+
+<div>
+
+<h1>
+
+Gestion des Publications
+
+</h1>
+
+<p>
+
+Publiez des photos, des conseils et les résultats avant/après.
+
+</p>
+
+</div>
+
+<button
+
+id="btnNouvellePublication"
+
+class="btn-primary">
+
+<i class="fa-solid fa-plus"></i>
+
+Nouvelle Publication
+
+</button>
+
+</header>
+
+<section class="dashboard-box">
+
+<div class="box-header">
+
+<div class="search-box">
+
+<i class="fa-solid fa-search"></i>
+
+<input
+
+type="text"
+
+id="recherchePublication"
+
+placeholder="Rechercher une publication...">
+
+</div>
+<div class="table-responsive">
+
+<table class="table">
+
+<thead>
+
+<tr>
+
+<th>Image</th>
+
+<th>Titre</th>
+
+<th>Catégorie</th>
+
+<th>Date</th>
+
+<th>Actions</th>
+
+</tr>
+
+</thead>
+
+<tbody id="publicationTable">
+
+<!-- Chargé automatiquement par publications.js -->
+
+</tbody>
+
+</table>
+
+</div>
+
+</section>
+
+<!-- ==========================
+MODAL NOUVELLE PUBLICATION
+========================== -->
+
+<div id="publicationModal" class="modal">
+
+<div class="modal-content modal-large">
+
+<div class="modal-header">
+
+<h2>
+
+<i class="fa-solid fa-images"></i>
+
+Nouvelle Publication
+
+</h2>
+
+<span class="close" id="closePublicationModal">
+
+&times;
+
+</span>
+
+</div>
+
+<form id="publicationForm">
+
+<div class="form-grid">
+
+<div class="form-group">
+
+<label>Titre</label>
+
+<input
+type="text"
+id="titre"
+required>
+
+</div>
+
+<div class="form-group">
+
+<label>Catégorie</label>
+
+<select id="categorie">
+
+<option>Avant / Après</option>
+
+<option>Conseil dentaire</option>
+
+<option>Promotion</option>
+
+<option>Actualité</option>
+
+<option>Information</option>
+
+</select>
+
+</div>
+
+<div class="form-group full-width">
+
+<label>Description</label>
+
+<textarea
+
+id="description"
+
+rows="5"
+
+placeholder="Description de la publication...">
+
+</textarea>
+
+</div>
+
+<div class="form-group full-width">
+
+<label>Image</label>
+
+<input
+
+type="file"
+
+id="image"
+
+accept="image/*">
+
+</div>
+<div class="modal-footer">
+
+<button
+
+type="button"
+
+class="btn btn-secondary"
+
+id="annulerPublication">
+
+Annuler
+
+</button>
+
+<button
+
+type="submit"
+
+class="btn btn-primary">
+
+<i class="fa-solid fa-floppy-disk"></i>
+
+Publier
+
+</button>
+
+</div>
+
+</form>
+
+</div>
+
+</div>
+
+<!-- ==========================
+DETAILS PUBLICATION
+========================== -->
+
+<div id="publicationDetails" class="modal">
+
+<div class="modal-content modal-large">
+
+<div class="modal-header">
+
+<h2>
+
+<i class="fa-solid fa-images"></i>
+
+Détails de la Publication
+
+</h2>
+
+<span
+
+class="close"
+
+id="closePublicationDetails">
+
+&times;
+
+</span>
+
+</div>
+
+<div id="publicationInfo">
+
+<!-- Chargé automatiquement par publications.js -->
+
+</div>
+
+</div>
+
+</div>
+
+</main>
+
+</div>
+
+<script type="module" src="firebase.js"></script>
+
+<script type="module" src="auth.js"></script>
+
+<script type="module" src="publications.js"></script>
+
+</body>
+
+</html>

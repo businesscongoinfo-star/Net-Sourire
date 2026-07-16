@@ -1,0 +1,384 @@
+<!DOCTYPE html>
+<html lang="fr">
+
+<head>
+
+<meta charset="UTF-8">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>Net Sourire | Tableau de bord Patient</title>
+
+<link rel="icon" href="images/logo.png">
+
+<link rel="stylesheet"
+href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css">
+
+<link rel="stylesheet" href="patient.css">
+
+</head>
+
+<body>
+
+<div class="patient-dashboard">
+
+<!-- ==========================
+SIDEBAR
+========================== -->
+
+<aside class="patient-sidebar">
+
+<div class="sidebar-header">
+
+<img
+src="images/logo.png"
+class="sidebar-logo"
+alt="Net Sourire">
+
+<h2>
+
+NET SOURIRE
+
+</h2>
+
+<p>
+
+Espace Patient
+
+</p>
+
+</div>
+
+<ul class="sidebar-menu">
+
+<li class="active">
+
+<a href="patient-dashboard.html">
+
+<i class="fa-solid fa-house"></i>
+
+Tableau de bord
+
+</a>
+
+</li>
+
+<li>
+
+<a href="patient-rendezvous.html">
+
+<i class="fa-solid fa-calendar-check"></i>
+
+Mes rendez-vous
+
+</a>
+
+</li>
+
+<li>
+
+<a href="patient-ordonnances.html">
+
+<i class="fa-solid fa-file-prescription"></i>
+
+Mes ordonnances
+
+</a>
+
+</li>
+
+<li>
+
+<a href="patient-factures.html">
+
+<i class="fa-solid fa-file-invoice-dollar"></i>
+
+Mes factures
+
+</a>
+
+</li>
+
+<li>
+
+<a href="patient-profil.html">
+
+<i class="fa-solid fa-user"></i>
+
+Mon profil
+
+</a>
+
+</li>
+
+<li>
+
+<a href="#" onclick="deconnexionPatient()">
+
+<i class="fa-solid fa-right-from-bracket"></i>
+
+Déconnexion
+
+</a>
+
+</li>
+
+</ul>
+
+</aside>
+
+<!-- ==========================
+CONTENU
+========================== -->
+
+<main class="patient-main">
+
+<header class="patient-topbar">
+
+<div>
+
+<h1>
+
+Bonjour,
+
+<span id="patientNom">
+
+Patient
+
+</span>
+
+👋
+
+</h1>
+
+<p>
+
+Bienvenue dans votre espace personnel Net Sourire.
+
+</p>
+
+</div>
+
+<div class="patient-avatar">
+
+<i class="fa-solid fa-circle-user"></i>
+
+</div>
+
+</header>
+<section class="dashboard-cards">
+
+<div class="card">
+
+<i class="fa-solid fa-calendar-check"></i>
+
+<div>
+
+<h2 id="totalRendezvous">
+
+0
+
+</h2>
+
+<p>
+
+Mes rendez-vous
+
+</p>
+
+</div>
+
+</div>
+
+<div class="card">
+
+<i class="fa-solid fa-file-prescription"></i>
+
+<div>
+
+<h2 id="totalOrdonnances">
+
+0
+
+</h2>
+
+<p>
+
+Mes ordonnances
+
+</p>
+
+</div>
+
+</div>
+
+<div class="card">
+
+<i class="fa-solid fa-file-invoice-dollar"></i>
+
+<div>
+
+<h2 id="totalFactures">
+
+0
+
+</h2>
+
+<p>
+
+Mes factures
+
+</p>
+
+</div>
+
+</div>
+
+<div class="card">
+
+<i class="fa-solid fa-bell"></i>
+
+<div>
+
+<h2 id="totalNotifications">
+
+0
+
+</h2>
+
+<p>
+
+Notifications
+
+</p>
+
+</div>
+
+</div>
+
+</section>
+
+<section class="dashboard-box">
+
+<div class="box-header">
+
+<h2>
+
+<i class="fa-solid fa-calendar-days"></i>
+
+Mon prochain rendez-vous
+
+</h2>
+
+</div>
+
+<div id="prochainRendezvous">
+
+<p>
+
+Aucun rendez-vous programmé.
+
+</p>
+
+</div>
+
+</section>
+
+<section class="dashboard-box">
+
+<div class="box-header">
+
+<h2>
+
+<i class="fa-solid fa-bell"></i>
+
+Dernières notifications
+
+</h2>
+
+</div>
+
+<div id="listeNotifications">
+
+<!-- Notifications chargées par patient-dashboard.js -->
+
+</div>
+
+</section>
+<section class="dashboard-box">
+
+<div class="box-header">
+
+<h2>
+
+<i class="fa-solid fa-clock-rotate-left"></i>
+
+Historique des rendez-vous
+
+</h2>
+
+<a href="patient-rendezvous.html" class="btn-primary">
+
+Voir tout
+
+</a>
+
+</div>
+
+<div class="table-responsive">
+
+<table class="table">
+
+<thead>
+
+<tr>
+
+<th>Date</th>
+
+<th>Heure</th>
+
+<th>Dentiste</th>
+
+<th>Statut</th>
+
+<th>Action</th>
+
+</tr>
+
+</thead>
+
+<tbody id="historiqueRendezvous">
+
+<!-- Chargé automatiquement par patient-dashboard.js -->
+
+</tbody>
+
+</table>
+
+</div>
+
+</section>
+
+<footer class="patient-footer">
+
+<p>
+
+© 2026 Net Sourire - Tous droits réservés
+
+</p>
+
+</footer>
+
+</main>
+
+</div>
+
+<script type="module" src="firebase.js"></script>
+
+<script type="module" src="patient-auth.js"></script>
+
+<script type="module" src="patient-dashboard.js"></script>
+
+</body>
+
+</html>

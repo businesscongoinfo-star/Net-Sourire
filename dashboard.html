@@ -1,0 +1,816 @@
+<!DOCTYPE html>
+<html lang="fr">
+
+<head>
+
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>Net Sourire - Dashboard</title>
+
+<link rel="stylesheet" href="dashboard.css">
+
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+
+<link rel="stylesheet"
+href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css">
+
+</head>
+
+<body>
+
+<div class="dashboard">
+
+<!-- =======================
+MENU LATERAL
+======================= -->
+
+<aside class="sidebar">
+
+<div class="logo">
+
+<img src="logo.png">
+
+<h2>Net Sourire</h2>
+
+</div>
+
+<ul>
+
+<li class="active">
+
+<a href="#" id="dashboardBtn">
+
+<i class="fa-solid fa-house"></i>
+
+<span>Dashboard</span>
+
+</a>
+
+</li>
+
+<li>
+
+<a href="#" id="patientsBtn">
+
+<i class="fa-solid fa-users"></i>
+
+<span>Patients</span>
+
+</a>
+
+</li>
+
+<li>
+
+    <li>
+
+<a href="#"
+
+id="calendrierRdvBtn">
+
+<i class="fa-solid fa-calendar-days"></i>
+
+<span>Calendrier</span>
+
+</a>
+
+</li>
+
+<li>
+
+<a href="#" id="odontogrammeBtn">
+
+<i class="fa-solid fa-tooth"></i>
+
+Odontogramme
+
+</a>
+
+</li>
+
+<a href="#" id="rdvBtn">
+
+<i class="fa-solid fa-calendar-days"></i>
+
+<span>Rendez-vous</span>
+
+</a>
+
+</li>
+
+<li>
+
+<a href="#" id="ordonnanceBtn">
+
+<i class="fa-solid fa-file-prescription"></i>
+
+<span>Ordonnances</span>
+
+</a>
+
+</li>
+
+<li>
+
+<a href="#" id="factureBtn">
+
+<i class="fa-solid fa-file-invoice-dollar"></i>
+
+<span>Factures</span>
+
+</a>
+
+</li>
+
+<li>
+
+<li>
+
+<a href="#" id="rapportBtn">
+
+<i class="fa-solid fa-chart-line"></i>
+
+Rapports
+
+</a>
+
+</li>
+
+<a href="#" id="caisseBtn">
+
+<i class="fa-solid fa-cash-register"></i>
+
+Caisse
+
+</a>
+
+</li>
+
+<li>
+
+<a href="#" id="publicationBtn">
+
+<i class="fa-solid fa-images"></i>
+
+<span>Publications</span>
+
+</a>
+
+</li>
+
+<li>
+
+<a href="#" id="parametreBtn">
+
+<i class="fa-solid fa-gear"></i>
+
+<span>Paramètres</span>
+
+</a>
+
+</li>
+
+<li>
+
+<a href="#" id="logoutBtn">
+
+<i class="fa-solid fa-right-from-bracket"></i>
+
+<span>Déconnexion</span>
+
+</a>
+
+</li>
+
+</ul>
+
+</aside>
+
+<!-- =======================
+CONTENU
+======================= -->
+
+<main class="content">
+
+<header class="topbar">
+
+<div>
+
+<h1>Bonjour Administrateur 👋</h1>
+
+<p>Bienvenue sur le tableau de bord Net Sourire</p>
+
+</div>
+
+<div class="top-right">
+
+<button class="notification">
+
+<i class="fa-solid fa-bell"></i>
+
+<span id="notificationCount">0</span>
+
+</button>
+
+<div class="admin">
+
+<img src="admin.png">
+
+<div>
+
+<h3>Administrateur</h3>
+
+<p>Cabinet Net Sourire</p>
+
+</div>
+
+</div>
+
+</div>
+
+</header>
+<!-- ==========================
+STATISTIQUES
+========================== -->
+
+<section class="cards">
+
+<div class="card blue">
+
+<div class="icon">
+<i class="fa-solid fa-users"></i>
+</div>
+
+<div class="info">
+<h2 id="totalPatients">0</h2>
+<p>Patients</p>
+</div>
+
+</div>
+
+<div class="card green">
+
+<div class="icon">
+<i class="fa-solid fa-calendar-check"></i>
+</div>
+
+<div class="info">
+<h2 id="totalRendezVous">0</h2>
+<p>Rendez-vous</p>
+</div>
+
+</div>
+
+<div class="card orange">
+
+<div class="icon">
+<i class="fa-solid fa-file-prescription"></i>
+</div>
+
+<div class="info">
+<h2 id="totalOrdonnances">0</h2>
+<p>Ordonnances</p>
+</div>
+
+</div>
+
+<div class="card red">
+
+<div class="icon">
+<i class="fa-solid fa-file-invoice-dollar"></i>
+</div>
+
+<div class="info">
+<h2 id="totalFactures">0</h2>
+<p>Factures</p>
+</div>
+
+</div>
+
+<div class="card purple">
+
+<div class="icon">
+<i class="fa-solid fa-sack-dollar"></i>
+</div>
+
+<div class="info">
+<h2 id="totalRecettes">0 FCFA</h2>
+<p>Recettes</p>
+</div>
+
+</div>
+
+<div class="card cyan">
+
+<div class="icon">
+<i class="fa-solid fa-user-plus"></i>
+</div>
+
+<div class="info">
+<h2 id="nouveauxPatients">0</h2>
+<p>Nouveaux Patients</p>
+</div>
+
+</div>
+
+</section>
+
+<!-- ==========================
+RENDEZ-VOUS DU JOUR
+========================== -->
+
+<section class="dashboard-box">
+
+<div class="box-header">
+
+<h2>
+
+<i class="fa-solid fa-calendar-day"></i>
+
+Rendez-vous du jour
+
+</h2>
+
+<button class="btn-primary">
+
+<i class="fa-solid fa-plus"></i>
+
+Nouveau Rendez-vous
+
+<li>
+
+<a href="#"
+
+id="calendrierBtn">
+
+<i class="fa-solid fa-calendar-days"></i>
+
+Calendrier
+
+</a>
+
+</li>
+
+</button>
+
+</div>
+
+<table>
+
+<thead>
+
+<tr>
+
+<th>Patient</th>
+
+<th>Téléphone</th>
+
+<th>Date</th>
+
+<th>Heure</th>
+
+<th>Statut</th>
+
+<th>Action</th>
+
+</tr>
+
+</thead>
+
+<tbody id="tableRendezVous">
+
+<!-- Firebase -->
+
+</tbody>
+
+</table>
+
+</section>
+
+<!-- ==========================
+ACTIVITÉS
+========================== -->
+
+<section class="dashboard-box">
+
+<div class="box-header">
+
+<h2>
+
+<i class="fa-solid fa-clock-rotate-left"></i>
+
+Activités récentes
+
+</h2>
+
+</div>
+
+<div id="activityList">
+
+<p>Aucune activité pour le moment.</p>
+
+</div>
+
+</section>
+<!-- ==========================
+TABLEAU PRINCIPAL
+========================== -->
+
+<section class="dashboard-grid">
+
+<!-- PATIENTS -->
+
+<div class="dashboard-box">
+
+<div class="box-header">
+
+<h2>
+
+<i class="fa-solid fa-users"></i>
+
+Patients récents
+
+</h2>
+
+<button class="btn-primary" id="addPatient">
+
+<i class="fa-solid fa-user-plus"></i>
+
+Ajouter
+
+</button>
+
+</div>
+
+<table>
+
+<thead>
+
+<tr>
+
+<th>Nom</th>
+
+<th>Téléphone</th>
+
+<th>Dernière visite</th>
+
+<th>Action</th>
+
+</tr>
+
+</thead>
+
+<tbody id="patientsTable">
+
+</tbody>
+
+</table>
+
+</div>
+
+<!-- CALENDRIER -->
+
+<div class="dashboard-box">
+
+<div class="box-header">
+
+<h2>
+
+<i class="fa-solid fa-calendar"></i>
+
+Calendrier
+
+</h2>
+
+</div>
+
+<div id="calendar">
+
+<p>Le calendrier sera chargé ici.</p>
+
+</div>
+
+</div>
+
+</section>
+
+<!-- ==========================
+RECETTES
+========================== -->
+
+<section class="dashboard-box">
+
+<div class="box-header">
+
+<h2>
+
+<i class="fa-solid fa-chart-column"></i>
+
+Recettes du Cabinet
+
+</h2>
+
+</div>
+
+<div class="recettes">
+
+<div class="recette-card">
+
+<h3>Aujourd'hui</h3>
+
+<h1 id="todayIncome">0 FCFA</h1>
+
+</div>
+
+<div class="recette-card">
+
+<h3>Cette semaine</h3>
+
+<h1 id="weekIncome">0 FCFA</h1>
+
+</div>
+
+<div class="recette-card">
+
+<h3>Ce mois</h3>
+
+<h1 id="monthIncome">0 FCFA</h1>
+
+</div>
+
+<div class="recette-card">
+
+<h3>Cette année</h3>
+
+<h1 id="yearIncome">0 FCFA</h1>
+
+</div>
+
+</div>
+
+</section>
+
+<!-- ==========================
+NOTIFICATIONS
+========================== -->
+
+<section class="dashboard-box">
+
+<div class="box-header">
+
+<h2>
+
+<i class="fa-solid fa-bell"></i>
+
+Notifications
+
+</h2>
+
+</div>
+
+<ul id="notificationsList">
+
+<li>Nouveau rendez-vous reçu.</li>
+
+<li>Nouvelle facture créée.</li>
+
+<li>Nouveau patient enregistré.</li>
+
+</ul>
+
+</section>
+<!-- ==========================
+MODULES DYNAMIQUES
+========================== -->
+
+<section id="pageContent">
+
+<!-- Le contenu changera automatiquement
+(Patients, Rendez-vous, Ordonnances,
+Factures, Publications, Paramètres) -->
+
+</section>
+
+<!-- ==========================
+FENÊTRE AJOUT PATIENT
+========================== -->
+
+<div class="modal" id="patientModal">
+
+<div class="modal-content">
+
+<div class="modal-header">
+
+<h2>Nouveau Patient</h2>
+
+<button class="closeModal">&times;</button>
+
+</div>
+
+<form id="patientForm">
+
+<input
+type="text"
+id="nomPatient"
+placeholder="Nom complet"
+required>
+
+<input
+type="tel"
+id="telephonePatient"
+placeholder="Téléphone"
+required>
+
+<input
+type="email"
+id="emailPatient"
+placeholder="Adresse e-mail">
+
+<input
+type="date"
+id="dateNaissance">
+
+<textarea
+id="adressePatient"
+placeholder="Adresse"></textarea>
+
+<button
+type="submit"
+class="btn-primary">
+
+<i class="fa-solid fa-floppy-disk"></i>
+
+Enregistrer
+
+</button>
+
+</form>
+
+</div>
+
+</div>
+
+<!-- ==========================
+FENÊTRE RENDEZ-VOUS
+========================== -->
+
+<div class="modal" id="rdvModal">
+
+<div class="modal-content">
+
+<div class="modal-header">
+
+<h2>Répondre au rendez-vous</h2>
+
+<button class="closeModal">&times;</button>
+
+</div>
+
+<form id="rdvForm">
+
+<input
+type="date"
+id="nouvelleDate">
+
+<input
+type="time"
+id="nouvelleHeure">
+
+<textarea
+id="motifReport"
+placeholder="Motif du report ou du refus"></textarea>
+
+<div class="actions">
+
+<button
+type="button"
+class="btn btn-success"
+id="btnAccepter">
+
+Accepter
+
+</button>
+
+<button
+type="button"
+class="btn btn-warning"
+id="btnReporter">
+
+Reporter
+
+</button>
+
+<button
+type="button"
+class="btn btn-danger"
+id="btnRefuser">
+
+Refuser
+
+</button>
+
+</div>
+
+</form>
+
+</div>
+
+</div>
+
+<!-- ==========================
+FENÊTRE ORDONNANCE
+========================== -->
+
+<div class="modal" id="ordonnanceModal">
+
+<div class="modal-content">
+
+<h2>Nouvelle Ordonnance</h2>
+
+<form>
+
+<input
+type="text"
+placeholder="Nom du patient">
+
+<textarea
+rows="8"
+placeholder="Prescription médicale"></textarea>
+
+<button
+class="btn-primary">
+
+Générer PDF
+
+</button>
+
+</form>
+
+</div>
+
+</div>
+
+<!-- ==========================
+FENÊTRE FACTURE
+========================== -->
+
+<div class="modal" id="factureModal">
+
+<div class="modal-content">
+
+<h2>Nouvelle Facture</h2>
+
+<form>
+
+<input
+type="text"
+placeholder="Nom du patient">
+
+<input
+type="number"
+placeholder="Montant">
+
+<textarea
+placeholder="Description"></textarea>
+
+<button
+class="btn-primary">
+
+Créer Facture
+
+</button>
+
+</form>
+
+</div>
+
+</div>
+
+</main>
+
+</div>
+
+<script type="module" src="firebase.js"></script>
+
+<script type="module" src="dashboard.js"></script>
+
+<script type="module" src="auth.js"></script>
+
+<script type="module" src="firebase.js"></script>
+<script type="module" src="auth.js"></script>
+<script type="module" src="dashboard.js"></script>
+<script type="module" src="patients.js"></script>
+<script type="module" src="rendezvous.js"></script>
+<script type="module" src="ordonnances.js"></script>
+<script type="module" src="factures.js"></script>
+<script type="module" src="publications.js"></script>
+<script type="module" src="caisse.js"></script>
+<script type="module" src="rapports.js"></script>
+<script type="module" src="odontogramme.js"></script>
+</body>
+</html>
+
+</body>
+
+</html>

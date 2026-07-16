@@ -1,0 +1,480 @@
+<!DOCTYPE html>
+<html lang="fr">
+
+<head>
+
+<meta charset="UTF-8">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>Net Sourire | Rendez-vous</title>
+
+<link rel="stylesheet" href="dashboard.css">
+
+<link rel="stylesheet"
+href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css">
+
+</head>
+
+<body>
+
+<div class="dashboard">
+
+<!-- ===== SIDEBAR ===== -->
+
+<aside class="sidebar">
+
+<div class="sidebar-header">
+
+<img
+src="images/logo.png"
+class="sidebar-logo">
+
+<h2>
+
+NET SOURIRE
+
+</h2>
+
+</div>
+
+<ul class="sidebar-menu">
+
+<li>
+
+<a href="dashboard.html">
+
+<i class="fa-solid fa-house"></i>
+
+Dashboard
+
+</a>
+
+</li>
+
+<li>
+
+<a href="patients.html">
+
+<i class="fa-solid fa-user-group"></i>
+
+Patients
+
+</a>
+
+</li>
+
+<li class="active">
+
+<a href="rendezvous.html">
+
+<i class="fa-solid fa-calendar-check"></i>
+
+Rendez-vous
+
+</a>
+
+</li>
+
+<li>
+
+<a href="ordonnance.html">
+
+<i class="fa-solid fa-file-prescription"></i>
+
+Ordonnances
+
+</a>
+
+</li>
+
+<li>
+
+<a href="facture.html">
+
+<i class="fa-solid fa-file-invoice-dollar"></i>
+
+Factures
+
+</a>
+
+</li>
+
+<li>
+
+<a href="publications.html">
+
+<i class="fa-solid fa-images"></i>
+
+Publications
+
+</a>
+
+</li>
+
+<li>
+
+<a href="parametres.html">
+
+<i class="fa-solid fa-gear"></i>
+
+Paramètres
+
+</a>
+
+</li>
+
+<li>
+
+<a href="#" onclick="deconnexion()">
+
+<i class="fa-solid fa-right-from-bracket"></i>
+
+Déconnexion
+
+</a>
+
+</li>
+
+</ul>
+
+</aside>
+
+<!-- ===== CONTENU ===== -->
+
+<main class="main-content">
+
+<header class="topbar">
+
+<div>
+
+<h1>
+
+Gestion des Rendez-vous
+
+</h1>
+
+<p>
+
+Planifiez et gérez les rendez-vous des patients.
+
+</p>
+
+</div>
+
+<button
+
+id="btnAjouterRdv"
+
+class="btn-primary">
+
+<i class="fa-solid fa-calendar-plus"></i>
+
+Nouveau Rendez-vous
+
+</button>
+
+</header>
+
+<section class="dashboard-box">
+
+<div class="box-header">
+
+<div class="search-box">
+
+<i class="fa-solid fa-search"></i>
+
+<input
+
+type="text"
+
+id="rechercheRdv"
+
+placeholder="Rechercher un rendez-vous...">
+
+</div>
+<div class="table-responsive">
+
+<table class="table">
+
+<thead>
+
+<tr>
+
+<th>N°</th>
+
+<th>Patient</th>
+
+<th>Téléphone</th>
+
+<th>Date</th>
+
+<th>Heure</th>
+
+<th>Dentiste</th>
+
+<th>Statut</th>
+
+<th>Actions</th>
+
+</tr>
+
+</thead>
+
+<tbody id="rendezvousTable">
+
+<!-- Chargé automatiquement par rendezvous.js -->
+
+</tbody>
+
+</table>
+
+</div>
+
+</section>
+
+<!-- ==========================
+MODAL AJOUT RENDEZ-VOUS
+========================== -->
+
+<div id="rendezvousModal" class="modal">
+
+<div class="modal-content">
+
+<div class="modal-header">
+
+<h2>
+
+<i class="fa-solid fa-calendar-plus"></i>
+
+Nouveau Rendez-vous
+
+</h2>
+
+<span class="close" id="closeRdvModal">
+
+&times;
+
+</span>
+
+</div>
+
+<form id="rendezvousForm">
+
+<div class="form-grid">
+
+<div class="form-group">
+
+<label>Nom du patient</label>
+
+<input
+type="text"
+id="patientNom"
+required>
+
+</div>
+
+<div class="form-group">
+
+<label>Téléphone</label>
+
+<input
+type="tel"
+id="patientTelephone"
+required>
+
+</div>
+
+<div class="form-group">
+
+<label>Date</label>
+
+<input
+type="date"
+id="dateRdv"
+required>
+
+</div>
+
+<div class="form-group">
+
+<label>Heure</label>
+
+<input
+type="time"
+id="heureRdv"
+required>
+
+</div>
+
+<div class="form-group">
+
+<label>Dentiste</label>
+
+<input
+type="text"
+id="dentiste"
+placeholder="Nom du dentiste">
+
+</div>
+
+<div class="form-group">
+
+<label>Type de consultation</label>
+
+<select id="typeConsultation">
+
+<option>Consultation</option>
+
+<option>Détartrage</option>
+
+<option>Soin dentaire</option>
+
+<option>Extraction</option>
+
+<option>Implant</option>
+
+<option>Orthodontie</option>
+
+<option>Contrôle</option>
+
+<option>Urgence</option>
+
+</select>
+
+</div>
+<div class="form-group">
+
+<label>Motif</label>
+
+<input
+type="text"
+id="motif"
+placeholder="Motif du rendez-vous">
+
+</div>
+
+<div class="form-group">
+
+<label>Statut</label>
+
+<select id="statut">
+
+<option value="Programmé">Programmé</option>
+
+<option value="Confirmé">Confirmé</option>
+
+<option value="En attente">En attente</option>
+
+<option value="Annulé">Annulé</option>
+
+<option value="Terminé">Terminé</option>
+
+</select>
+
+</div>
+
+<div class="form-group full-width">
+
+<label>Observations</label>
+
+<textarea
+
+id="observation"
+
+rows="4"
+
+placeholder="Observations concernant le rendez-vous...">
+
+</textarea>
+
+</div>
+
+</div>
+
+<div class="modal-footer">
+
+<button
+
+type="button"
+
+class="btn btn-secondary"
+
+id="annulerRdv">
+
+Annuler
+
+</button>
+
+<button
+
+type="submit"
+
+class="btn btn-primary">
+
+<i class="fa-solid fa-floppy-disk"></i>
+
+Enregistrer
+
+</button>
+
+</div>
+
+</form>
+
+</div>
+
+</div>
+<!-- ==========================
+DETAILS DU RENDEZ-VOUS
+========================== -->
+
+<div id="rendezvousDetails" class="modal">
+
+<div class="modal-content modal-large">
+
+<div class="modal-header">
+
+<h2>
+
+<i class="fa-solid fa-calendar-check"></i>
+
+Détails du Rendez-vous
+
+</h2>
+
+<span
+
+class="close"
+
+id="closeRendezvousDetails">
+
+&times;
+
+</span>
+
+</div>
+
+<div id="rendezvousInfo">
+
+<!-- Les informations seront chargées automatiquement par rendezvous.js -->
+
+</div>
+
+</div>
+
+</div>
+
+</main>
+
+</div>
+
+<script type="module" src="firebase.js"></script>
+
+<script type="module" src="auth.js"></script>
+
+<script type="module" src="rendezvous.js"></script>
+
+</body>
+
+</html>

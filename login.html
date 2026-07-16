@@ -1,0 +1,363 @@
+<!DOCTYPE html>
+<html lang="fr">
+
+<head>
+
+<meta charset="UTF-8">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>Net Sourire | Connexion</title>
+
+<meta name="theme-color" content="#0D6EFD">
+
+<link rel="icon" href="images/logo.png">
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+
+<link rel="stylesheet"
+href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css">
+
+<link rel="stylesheet" href="login.css">
+
+</head>
+
+<body>
+
+<div class="login-page">
+
+<div class="login-left">
+
+<div class="overlay"></div>
+
+<div class="left-content">
+
+<img
+src="images/logo.png"
+class="logo"
+alt="Net Sourire">
+
+<h1>
+
+NET SOURIRE
+
+</h1>
+
+<h3>
+
+Logiciel Professionnel de Gestion de Cabinet Dentaire
+
+</h3>
+
+<p>
+
+Une solution complète pour gérer les patients, les rendez-vous, les ordonnances, les factures et l'odontogramme.
+
+</p>
+
+<div class="features">
+
+<div class="feature">
+
+<i class="fa-solid fa-user-group"></i>
+
+<span>Gestion des Patients</span>
+
+</div>
+
+<div class="feature">
+
+<i class="fa-solid fa-calendar-check"></i>
+
+<span>Gestion des Rendez-vous</span>
+
+</div>
+
+<div class="feature">
+
+<i class="fa-solid fa-file-prescription"></i>
+
+<span>Ordonnances</span>
+
+</div>
+
+<div class="feature">
+
+<i class="fa-solid fa-file-invoice-dollar"></i>
+
+<span>Facturation</span>
+
+</div>
+
+<div class="feature">
+
+<i class="fa-solid fa-tooth"></i>
+
+<span>Odontogramme</span>
+
+</div>
+
+<div class="feature">
+
+<i class="fa-solid fa-chart-line"></i>
+
+<span>Statistiques</span>
+
+</div>
+
+</div>
+
+</div>
+
+</div>
+
+<div class="login-right">
+
+<div class="login-card">
+
+<h2>
+
+Connexion
+
+</h2>
+
+<p>
+
+Bienvenue. Connectez-vous à votre espace administrateur.
+
+</p>
+
+<form id="loginForm">
+
+<div class="input-group">
+
+<i class="fa-solid fa-envelope"></i>
+
+<input
+
+type="email"
+
+id="email"
+
+placeholder="Adresse e-mail"
+
+autocomplete="email"
+
+required>
+
+</div>
+
+<div class="input-group">
+
+<i class="fa-solid fa-lock"></i>
+
+<input
+
+type="password"
+
+id="password"
+
+placeholder="Mot de passe"
+
+autocomplete="current-password"
+
+required>
+
+</div>
+<div class="options">
+
+<label class="remember">
+
+<input
+
+type="checkbox"
+
+id="rememberMe">
+
+<span>
+
+Se souvenir de moi
+
+</span>
+
+</label>
+
+<a
+
+href="#"
+
+id="forgotPassword">
+
+Mot de passe oublié ?
+
+</a>
+
+</div>
+
+<button
+
+type="submit"
+
+class="login-btn"
+
+id="loginBtn">
+
+<i class="fa-solid fa-right-to-bracket"></i>
+
+<span>
+
+Se connecter
+
+</span>
+
+</button>
+
+<div
+
+id="loginMessage"
+
+class="login-message">
+
+</div>
+
+</form>
+
+<div class="login-divider">
+
+<span>
+
+ou
+
+</span>
+
+</div>
+
+<div class="login-info">
+
+<div class="info-box">
+
+<i class="fa-solid fa-shield-halved"></i>
+
+<div>
+
+<h4>
+
+Connexion Sécurisée
+
+</h4>
+
+<p>
+
+Vos informations sont protégées par Firebase Authentication.
+
+</p>
+
+</div>
+
+</div>
+
+<div class="info-box">
+
+<i class="fa-solid fa-lock"></i>
+
+<div>
+
+<h4>
+
+Accès Administrateur
+
+</h4>
+
+<p>
+
+Seuls les utilisateurs autorisés peuvent accéder au tableau de bord.
+
+</p>
+
+</div>
+
+</div>
+
+</div>
+
+<div class="copyright">
+
+© 2026 Net Sourire — Tous droits réservés
+
+</div>
+
+</div>
+
+</div>
+<script type="module" src="firebase.js"></script>
+<script type="module" src="auth.js"></script>
+
+<script>
+
+window.addEventListener("load",()=>{
+
+const email=document.getElementById("email");
+
+if(email){
+
+email.focus();
+
+}
+
+});
+
+const password=document.getElementById("password");
+
+const loginForm=document.getElementById("loginForm");
+
+password.addEventListener("keypress",(e)=>{
+
+if(e.key==="Enter"){
+
+e.preventDefault();
+
+loginForm.requestSubmit();
+
+}
+
+});
+
+const btn=document.getElementById("loginBtn");
+
+loginForm.addEventListener("submit",()=>{
+
+btn.disabled=true;
+
+btn.innerHTML=`
+
+<i class="fa-solid fa-spinner fa-spin"></i>
+
+Connexion...
+
+`;
+
+});
+
+window.addEventListener("pageshow",()=>{
+
+btn.disabled=false;
+
+btn.innerHTML=`
+
+<i class="fa-solid fa-right-to-bracket"></i>
+
+<span>Se connecter</span>
+
+`;
+
+});
+
+</script>
+
+</body>
+
+</html>
