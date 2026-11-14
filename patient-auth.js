@@ -89,31 +89,7 @@ return;
 
 }
 
-// La suite vérifiera les informations
-// puis redirigera vers patient-dashboard.html
-
-}catch(error){
-
-console.error(error);
-
-message.style.color="red";
-
-message.innerHTML=error.message;
-
-}
-}
-
-// ==========================================
-// FIN PARTIE 1
-// ==========================================
-// ==========================================
-// NET SOURIRE
-// PATIENT-AUTH.JS
-// PARTIE 2
-// ==========================================
-
 // Vérification du compte patient
-
 const patient = patientDoc.data();
 
 if(patient.statut && patient.statut === "bloque"){

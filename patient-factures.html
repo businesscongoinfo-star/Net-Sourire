@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="fr">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Net Sourire | Mes factures</title>
+  <link rel="icon" href="images/logo.png">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css">
+  <link rel="stylesheet" href="patient.css">
+</head>
+
+<body>
+  <div class="patient-dashboard">
+    <aside class="patient-sidebar">
+      <div class="sidebar-header">
+        <img src="images/logo.png" class="sidebar-logo" alt="Net Sourire">
+        <h2>NET SOURIRE</h2>
+        <p>Espace Patient</p>
+      </div>
+      <ul class="sidebar-menu">
+        <li><a href="patient-dashboard.html"><i class="fa-solid fa-house"></i> Tableau de bord</a></li>
+        <li><a href="patient-rendezvous.html"><i class="fa-solid fa-calendar-check"></i> Mes rendez-vous</a></li>
+        <li><a href="patient-ordonnances.html"><i class="fa-solid fa-file-prescription"></i> Mes ordonnances</a></li>
+        <li class="active"><a href="patient-factures.html"><i class="fa-solid fa-file-invoice-dollar"></i> Mes factures</a></li>
+        <li><a href="patient-profil.html"><i class="fa-solid fa-user"></i> Mon profil</a></li>
+        <li><a href="#" id="logoutBtn"><i class="fa-solid fa-right-from-bracket"></i> Déconnexion</a></li>
+      </ul>
+    </aside>
+
+    <main class="patient-main">
+      <header class="patient-header">
+        <h1><i class="fa-solid fa-file-invoice-dollar"></i> Mes factures</h1>
+      </header>
+
+      <section class="patient-section">
+        <div id="facturesList" class="cards-container">
+          <p>Chargement de vos factures...</p>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <script type="module">
+    import { auth, db } from "./firebase.js";
+    import { onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/12.0.0/firebase-auth.js";
+    import { collection, query, where, getDocs } from "https://www.gstatic.com/firebasejs/12.0.0/firebase-firestore.js";
+
+    const listEl = document.getElementById("facturesList");
+    const logoutBtn = document.getElementById("logoutBtn");
+
+    if (logoutBtn) {
+      logoutBtn.addEventListener("click", async (e) => {
+        e.preventDefault();
+        await signOut(auth);
+        localStorage.clear();
+        window.location.href = "patient-login.html";
+      });
+    }
+
+    onAuthStateChanged(auth, async (user) => {
+      if (!user) {
+        window.location.href = "patient-login.html";
+        return;
+      }
+
+      try {
+        const q = query(collection(db, "factures"), where("patientId", "==", user.uid));
+        const snap = await getDocs(q);
+
+        if (snap.empty) {
+          listEl.innerHTML = "<p>Aucune facture disponible pour le moment.</p>";
+          return;
+        }
+
+        listEl.innerHTML = "";
+        snap.forEach((docSnap) => {
+          const data = docSnap.data();
+          const card = document.createElement("div");
+          card.className = "patient-card";
+          card.innerHTML = `
+            <h3>Facture #${data.numero || docSnap.id.slice(0, 6)}</h3>
+            <p><strong>Date :</strong> ${data.date || "N/A"}</p>
+            <p><strong>Montant :</strong> ${data.montant || data.total || 0} FCFA</p>
+            <p><strong>Statut :</strong> ${data.statut || "En attente"}</p>
+          `;
+          listEl.appendChild(card);
+        });
+      } catch (err) {
+        console.error(err);
+        listEl.innerHTML = "<p>Impossible de charger les factures.</p>";
+      }
+    });
+  </script>
+</body>
+
+</html>

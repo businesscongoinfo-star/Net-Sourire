@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="fr">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Net Sourire | Mon profil</title>
+  <link rel="icon" href="images/logo.png">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css">
+  <link rel="stylesheet" href="patient.css">
+</head>
+
+<body>
+  <div class="patient-dashboard">
+    <aside class="patient-sidebar">
+      <div class="sidebar-header">
+        <img src="images/logo.png" class="sidebar-logo" alt="Net Sourire">
+        <h2>NET SOURIRE</h2>
+        <p>Espace Patient</p>
+      </div>
+      <ul class="sidebar-menu">
+        <li><a href="patient-dashboard.html"><i class="fa-solid fa-house"></i> Tableau de bord</a></li>
+        <li><a href="patient-rendezvous.html"><i class="fa-solid fa-calendar-check"></i> Mes rendez-vous</a></li>
+        <li><a href="patient-ordonnances.html"><i class="fa-solid fa-file-prescription"></i> Mes ordonnances</a></li>
+        <li><a href="patient-factures.html"><i class="fa-solid fa-file-invoice-dollar"></i> Mes factures</a></li>
+        <li class="active"><a href="patient-profil.html"><i class="fa-solid fa-user"></i> Mon profil</a></li>
+        <li><a href="#" id="logoutBtn"><i class="fa-solid fa-right-from-bracket"></i> Déconnexion</a></li>
+      </ul>
+    </aside>
+
+    <main class="patient-main">
+      <header class="patient-header">
+        <h1><i class="fa-solid fa-user"></i> Mon profil</h1>
+      </header>
+
+      <section class="patient-section">
+        <form id="profilForm" class="patient-card">
+          <div style="margin-bottom: 12px;">
+            <label for="nom">Nom complet</label><br>
+            <input type="text" id="nom" required style="width: 100%; padding: 8px; margin-top: 4px;">
+          </div>
+          <div style="margin-bottom: 12px;">
+            <label for="email">Adresse e-mail</label><br>
+            <input type="email" id="email" disabled style="width: 100%; padding: 8px; margin-top: 4px;">
+          </div>
+          <div style="margin-bottom: 12px;">
+            <label for="telephone">Téléphone</label><br>
+            <input type="text" id="telephone" style="width: 100%; padding: 8px; margin-top: 4px;">
+          </div>
+          <button type="submit" class="btn-primary">Enregistrer les modifications</button>
+          <p id="profilMessage" style="margin-top: 10px;"></p>
+        </form>
+      </section>
+    </main>
+  </div>
+
+  <script type="module">
+    import { auth, db } from "./firebase.js";
+    import { onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/12.0.0/firebase-auth.js";
+    import { doc, getDoc, updateDoc } from "https://www.gstatic.com/firebasejs/12.0.0/firebase-firestore.js";
+
+    const form = document.getElementById("profilForm");
+    const msg = document.getElementById("profilMessage");
+    const logoutBtn = document.getElementById("logoutBtn");
+    let currentUid = null;
+
+    if (logoutBtn) {
+      logoutBtn.addEventListener("click", async (e) => {
+        e.preventDefault();
+        await signOut(auth);
+        localStorage.clear();
+        window.location.href = "patient-login.html";
+      });
+    }
+
+    onAuthStateChanged(auth, async (user) => {
+      if (!user) {
+        window.location.href = "patient-login.html";
+        return;
+      }
+      currentUid = user.uid;
+
+      try {
+        const snap = await getDoc(doc(db, "patients", user.uid));
+        if (snap.exists()) {
+          const data = snap.data();
+          document.getElementById("nom").value = data.nom || "";
+          document.getElementById("email").value = data.email || user.email || "";
+          document.getElementById("telephone").value = data.telephone || "";
+        }
+      } catch (err) {
+        console.error(err);
+      }
+    });
+
+    form.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      if (!currentUid) return;
+
+      try {
+        await updateDoc(doc(db, "patients", currentUid), {
+          nom: document.getElementById("nom").value.trim(),
+          telephone: document.getElementById("telephone").value.trim()
+        });
+        msg.style.color = "green";
+        msg.textContent = "Profil mis à jour avec succès.";
+      } catch (err) {
+        console.error(err);
+        msg.style.color = "red";
+        msg.textContent = "Erreur lors de la mise à jour.";
+      }
+    });
+  </script>
+</body>
+
+</html>
