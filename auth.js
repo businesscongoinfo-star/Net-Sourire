@@ -40,10 +40,20 @@ if (loginForm) {
 }
 
 // ===============================
-// PROTECTION DU DASHBOARD
+// PROTECTION DES PAGES ADMIN
 // ===============================
 
-if (window.location.pathname.includes("dashboard.html")) {
+const adminPages = [
+  "dashboard.html",
+  "patients.html",
+  "rendezvous.html",
+  "ordonnance.html",
+  "facture.html",
+  "publications.html",
+  "parametres.html"
+];
+
+if (adminPages.some((page) => window.location.pathname.includes(page))) {
 
   onAuthStateChanged(auth, (user) => {
 
