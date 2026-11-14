@@ -1615,3 +1615,17 @@ font-size:14px;
 /* ==========================
 FIN DASHBOARD CSS
 ========================== */
+
+/* ===========================
+FIX SIDEBAR LOGO OVERFLOW
+=========================== */
+.sidebar {
+  overflow-x: hidden;
+}
+
+.sidebar img {
+  width: 48px !important;
+  height: 48px !important;
+  object-fit: contain;
+  flex-shrink: 0;
+}
