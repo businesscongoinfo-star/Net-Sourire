@@ -148,13 +148,9 @@ background:#0049b8;
 /* HERO */
 
 .hero{
-
-padding-top:150px;
-
-padding-bottom:80px;
-
+padding-top:170px;
+padding-bottom:90px;
 background:linear-gradient(135deg,#eef7ff,#ffffff);
-
 }
 
 .hero-container{
@@ -1214,4 +1210,64 @@ width:100%;
 
 max-width:420px;
 
+}
+/* ===========================
+ANIMATIONS PRO
+=========================== */
+
+@keyframes fadeUp {
+  from {
+    opacity: 0;
+    transform: translateY(24px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes floatSlow {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-10px);
+  }
+}
+
+.hero-left {
+  animation: fadeUp 0.8s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.hero-right {
+  animation: fadeUp 0.9s cubic-bezier(0.22, 1, 0.36, 1) 0.15s both;
+}
+
+.hero-right img {
+  animation: floatSlow 5s ease-in-out infinite;
+}
+
+.btn-admin,
+.btn-rdv,
+.hero-buttons a {
+  transition: transform 0.25s ease, box-shadow 0.25s ease, background-color 0.25s ease;
+}
+
+.btn-admin:hover,
+.btn-rdv:hover,
+.hero-buttons a:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(13, 110, 253, 0.22);
+}
+
+.service-card,
+.team-card,
+.stat {
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.service-card:hover,
+.team-card:hover {
+  transform: translateY(-6px);
+  box-shadow: 0 16px 36px rgba(15, 23, 42, 0.1);
 }
