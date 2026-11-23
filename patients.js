@@ -4,7 +4,7 @@
 // PARTIE 1
 // ==========================================
 
-import { db } from "./firebase.js";
+import { db, storage } from "./firebase.js";
 
 import {
 collection,
@@ -21,11 +21,30 @@ serverTimestamp,
 onSnapshot
 } from "https://www.gstatic.com/firebasejs/12.0.0/firebase-firestore.js";
 
+import {
+ref,
+uploadBytes,
+getDownloadURL
+} from "https://www.gstatic.com/firebasejs/12.0.0/firebase-storage.js";
+
 // ==========================================
-// VARIABLES
+// VARIABLES (contexte detectionné)
 // ==========================================
 
+// Mode dashboard : contenu dynamique dans #pageContent
+// Mode standalone : table #patientsTable + modales fixes du HTML
 const pageContent = document.getElementById("pageContent");
+const estStandalone = !pageContent;
+
+// Échappement anti-XSS
+function escapeHtml(valeur){
+return String(valeur ?? "")
+.replace(/&/g,"&amp;")
+.replace(/</g,"&lt;")
+.replace(/>/g,"&gt;")
+.replace(/"/g,"&quot;")
+.replace(/'/g,"&#39;");
+}
 
 // ==========================================
 // MENU PATIENTS
@@ -36,7 +55,6 @@ const patientsBtn = document.getElementById("patientsBtn");
 if(patientsBtn){
 
 patientsBtn.addEventListener("click",(e)=>{
-
 e.preventDefault();
 
 ouvrirModulePatients();
@@ -50,6 +68,15 @@ ouvrirModulePatients();
 // ==========================================
 
 export async function ouvrirModulePatients(){
+
+if(estStandalone){
+
+// Page patients.html : la table existe déjà, on ne fait que la charger
+chargerPatients();
+
+return;
+
+}
 
 pageContent.innerHTML=`
 
@@ -107,48 +134,13 @@ chargerPatients();
 
 async function chargerPatients(){
 
-const zone=document.getElementById("listePatients");
-
-if(!zone) return;
-
-zone.innerHTML=`
-
-<table class="table">
-
-<thead>
-
-<tr>
-
-<th>Nom</th>
-
-<th>Téléphone</th>
-
-<th>Email</th>
-
-<th>Sexe</th>
-
-<th>Actions</th>
-
-</tr>
-
-</thead>
-
-<tbody id="patientsTable">
-
-</tbody>
-
-</table>
-
-`;
-
 const tbody=document.getElementById("patientsTable");
 
+if(!tbody) return;
+
 const q=query(
-
 collection(db,"patients"),
-
 orderBy("dateCreation","desc")
-
 );
 
 const snapshot=await getDocs(q);
@@ -159,37 +151,35 @@ snapshot.forEach((patient)=>{
 
 const data=patient.data();
 
+// En standalone, le tableau a 8 colonnes (N°, Photo, Nom, Téléphone, Sexe, Âge, Date, Actions)
+// En dashboard, le gabarit est créé dynamiquement avec 5 colonnes.
+if(estStandalone){
+
 tbody.innerHTML+=`
 
 <tr>
 
-<td>${data.nom || ""}</td>
+<td>${snapshot.indexOf(patient)+1}</td>
 
-<td>${data.telephone || ""}</td>
+<td><img src="${data.photo || "images/docteur1.jpg"}" alt="Photo" style="width:40px;height:40px;border-radius:50%;object-fit:cover;"></td>
 
-<td>${data.email || ""}</td>
+<td>${escapeHtml(data.nom || "")}</td>
 
-<td>${data.sexe || ""}</td>
+<td>${escapeHtml(data.telephone || "")}</td>
+
+<td>${escapeHtml(data.sexe || "")}</td>
+
+<td>${age(data.naissance || data.dateNaissance)}</td>
+
+<td>${formatDate(data.dateCreation)}</td>
 
 <td>
-
-<hr>
-
-<h3>📋 Historique complet</h3>
-
-<div id="historiqueComplet">
-
-<div class="loader"></div>
-
-</div>
 
 <button
 class="btn btn-success"
 onclick="voirPatient('${patient.id}')">
 
 👁 Voir
-
-afficherHistoriquePatient(id);
 
 </button>
 
@@ -215,6 +205,54 @@ onclick="supprimerPatient('${patient.id}')">
 
 `;
 
+}else{
+
+tbody.innerHTML+=`
+
+<tr>
+
+<td>${escapeHtml(data.nom || "")}</td>
+
+<td>${escapeHtml(data.telephone || "")}</td>
+
+<td>${escapeHtml(data.email || "")}</td>
+
+<td>${escapeHtml(data.sexe || "")}</td>
+
+<td>
+
+<button
+class="btn btn-success"
+onclick="voirPatient('${patient.id}')">
+
+👁 Voir
+
+</button>
+
+<button
+class="btn btn-warning"
+onclick="modifierPatient('${patient.id}')">
+
+✏ Modifier
+
+</button>
+
+<button
+class="btn btn-danger"
+onclick="supprimerPatient('${patient.id}')">
+
+🗑 Supprimer
+
+</button>
+
+</td>
+
+</tr>
+
+`;
+
+}
+
 });
 
 if(snapshot.empty){
@@ -223,7 +261,7 @@ tbody.innerHTML=`
 
 <tr>
 
-<td colspan="5" style="text-align:center;padding:30px;">
+<td colspan="${estStandalone?8:5}" style="text-align:center;padding:30px;">
 
 Aucun patient enregistré.
 
@@ -237,14 +275,48 @@ Aucun patient enregistré.
 
 }
 
+// Calcul d'âge depuis la date de naissance (format AAAA-MM-JJ)
+function age(naissance){
+
+if(!naissance) return "-";
+
+const d=new Date(naissance);
+
+if(isNaN(d)) return "-";
+
+const maintenant=new Date();
+
+let a=maintenant.getFullYear()-d.getFullYear();
+
+const m=maintenant.getMonth()-d.getMonth();
+
+if(m<0||(m===0&&maintenant.getDate()<d.getDate())) a--;
+
+return a>=0?a:"-";
+
+}
+
+// Format de date pour les documents Firestore
+function formatDate(valeur){
+
+if(!valeur) return "-";
+
+if(typeof valeur.toDate === "function"){
+
+return valeur.toDate().toLocaleDateString();
+
+}
+
+return escapeHtml(valeur);
+
+}
+
 // ==========================================
 // RAFRAÎCHISSEMENT TEMPS RÉEL
 // ==========================================
 
 onSnapshot(
-
 collection(db,"patients"),
-
 ()=>{
 
 const table=document.getElementById("patientsTable");
@@ -277,6 +349,25 @@ ouvrirFormulairePatient();
 });
 
 function ouvrirFormulairePatient(){
+
+if(estStandalone){
+
+// La page patients.html possède déjà #patientModal et #patientForm
+const modal=document.getElementById("patientModal");
+
+if(modal) modal.style.display="flex";
+
+const form=document.getElementById("patientForm");
+
+if(form){
+
+form.onsubmit=enregistrerPatient;
+
+}
+
+return;
+
+}
 
 pageContent.innerHTML=`
 
@@ -375,35 +466,76 @@ async function enregistrerPatient(e){
 
 e.preventDefault();
 
-await addDoc(
+let nom="",telephone="",email="",naissance="",sexe="",profession="",adresse="";
 
-collection(db,"patients"),
+if(estStandalone){
 
-{
+// Champs de patients.html : nom, telephone, email, sexe, dateNaissance, profession, adresse
+nom=document.getElementById("nom").value.trim();
 
-nom:nom.value,
+telephone=document.getElementById("telephone").value.trim();
 
-telephone:telephone.value,
+email=document.getElementById("email").value.trim();
 
-email:email.value,
+naissance=document.getElementById("dateNaissance").value;
 
-naissance:naissance.value,
+sexe=document.getElementById("sexe").value;
 
-sexe:sexe.value,
+profession=document.getElementById("profession").value.trim();
 
-profession:profession.value,
+adresse=document.getElementById("adresse").value.trim();
 
-adresse:adresse.value,
+}else{
 
-dateCreation:serverTimestamp()
+nom=document.getElementById("nom").value.trim();
+
+telephone=document.getElementById("telephone").value.trim();
+
+email=document.getElementById("email").value.trim();
+
+naissance=document.getElementById("naissance").value;
+
+sexe=document.getElementById("sexe").value;
+
+profession=document.getElementById("profession").value.trim();
+
+adresse=document.getElementById("adresse").value.trim();
 
 }
 
+
+await addDoc(
+collection(db,"patients"),
+{
+nom:nom,
+telephone:telephone,
+email:email,
+naissance:naissance,
+sexe:sexe,
+profession:profession,
+adresse:adresse,
+dateCreation:serverTimestamp()
+}
 );
 
 alert("✅ Patient enregistré avec succès.");
 
+if(estStandalone){
+
+fermerModalStandalone("patientModal");
+
+}
+
 ouvrirModulePatients();
+
+}
+
+// Ferme un modal en mode standalone (patients.html utilise display:flex)
+function fermerModalStandalone(id){
+
+const modal=document.getElementById(id);
+
+if(modal) modal.style.display="none";
 
 }
 
@@ -429,6 +561,49 @@ return;
 }
 
 const p = snap.data();
+
+if(estStandalone){
+
+// Pré-remplir le formulaire de modification dans la modale patient
+const form=document.getElementById("patientForm");
+
+if(form){
+
+document.getElementById("nom").value=p.nom||"";
+
+document.getElementById("telephone").value=p.telephone||"";
+
+document.getElementById("email").value=p.email||"";
+
+if(document.getElementById("dateNaissance")) document.getElementById("dateNaissance").value=p.naissance||"";
+
+if(document.getElementById("sexe")) document.getElementById("sexe").value=p.sexe||"";
+
+if(document.getElementById("profession")) document.getElementById("profession").value=p.profession||"";
+
+if(document.getElementById("adresse")) document.getElementById("adresse").value=p.adresse||"";
+
+
+const modal=document.getElementById("patientModal");
+
+if(modal){
+
+const titre=modal.querySelector("h2");
+
+if(titre) titre.innerHTML="<i class=\"fa-solid fa-user-pen\"></i> Modifier le patient";
+
+modal.style.display="flex";
+
+}
+
+// Sauvegarde de l'id pour la mise à jour
+form.dataset.patientId=id;
+
+}
+
+return;
+
+}
 
 pageContent.innerHTML = `
 
@@ -470,9 +645,9 @@ value="${p.naissance || ""}">
 
 <select id="sexe">
 
-<option ${p.sexe=="Homme"?"selected":""}>Homme</option>
+<option ${p.sexe==="Homme"?"selected":""}>Homme</option>
 
-<option ${p.sexe=="Femme"?"selected":""}>Femme</option>
+<option ${p.sexe==="Femme"?"selected":""}>Femme</option>
 
 </select>
 
@@ -510,25 +685,16 @@ id="annulerModification">
 document
 .getElementById("modifierPatientForm")
 .addEventListener("submit",async(e)=>{
-
 e.preventDefault();
 
 await updateDoc(ref,{
-
 nom:nom.value,
-
 telephone:telephone.value,
-
 email:email.value,
-
 naissance:naissance.value,
-
 sexe:sexe.value,
-
 profession:profession.value,
-
 adresse:adresse.value
-
 });
 
 alert("✅ Patient modifié.");
@@ -598,6 +764,71 @@ return;
 
 const p = snap.data();
 
+if(estStandalone){
+
+// Afficher le dossier dans la modale #patientDetails
+const zone=document.getElementById("patientInfo");
+
+if(zone){
+
+zone.innerHTML=`
+
+<div class="profile-card">
+
+<h2>${escapeHtml(p.nom)}</h2>
+
+<p><b>Téléphone :</b> ${escapeHtml(p.telephone)}</p>
+
+<p><b>Email :</b> ${escapeHtml(p.email||"-")}</p>
+
+<p><b>Sexe :</b> ${escapeHtml(p.sexe||"-")}</p>
+
+<p><b>Date de naissance :</b> ${escapeHtml(p.naissance||"-")}</p>
+
+<p><b>Profession :</b> ${escapeHtml(p.profession||"-")}</p>
+
+<p><b>Adresse :</b> ${escapeHtml(p.adresse||"-")}</p>
+
+</div>
+
+<br>
+
+<div class="quick-actions">
+
+<div class="quick-card" onclick="nouvelleOrdonnance('${id}')">
+
+<i class="fa-solid fa-file-prescription"></i>
+
+<h3>Ordonnance</h3>
+
+<p>Créer une ordonnance</p>
+
+</div>
+
+<div class="quick-card" onclick="nouvelleFacture('${id}')">
+
+<i class="fa-solid fa-file-invoice-dollar"></i>
+
+<h3>Facture</h3>
+
+<p>Créer une facture</p>
+
+</div>
+
+</div>
+
+`;
+
+}
+
+const modal=document.getElementById("patientDetails");
+
+if(modal) modal.style.display="flex";
+
+return;
+
+}
+
 pageContent.innerHTML = `
 
 <section class="dashboard-box">
@@ -624,19 +855,19 @@ onclick="ouvrirModulePatients()">
 
 <div>
 
-<h2>${p.nom}</h2>
+<h2>${escapeHtml(p.nom)}</h2>
 
-<p><b>Téléphone :</b> ${p.telephone}</p>
+<p><b>Téléphone :</b> ${escapeHtml(p.telephone)}</p>
 
-<p><b>Email :</b> ${p.email || "-"}</p>
+<p><b>Email :</b> ${escapeHtml(p.email||"-")}</p>
 
-<p><b>Sexe :</b> ${p.sexe || "-"}</p>
+<p><b>Sexe :</b> ${escapeHtml(p.sexe||"-")}</p>
 
-<p><b>Date de naissance :</b> ${p.naissance || "-"}</p>
+<p><b>Date de naissance :</b> ${escapeHtml(p.naissance||"-")}</p>
 
-<p><b>Profession :</b> ${p.profession || "-"}</p>
+<p><b>Profession :</b> ${escapeHtml(p.profession||"-")}</p>
 
-<p><b>Adresse :</b> ${p.adresse || "-"}</p>
+<p><b>Adresse :</b> ${escapeHtml(p.adresse||"-")}</p>
 
 </div>
 
@@ -646,8 +877,7 @@ onclick="ouvrirModulePatients()">
 
 <div class="quick-actions">
 
-<div class="quick-card"
-onclick="nouvelleOrdonnance('${id}')">
+<div class="quick-card" onclick="nouvelleOrdonnance('${id}')">
 
 <i class="fa-solid fa-file-prescription"></i>
 
@@ -657,8 +887,7 @@ onclick="nouvelleOrdonnance('${id}')">
 
 </div>
 
-<div class="quick-card"
-onclick="nouvelleFacture('${id}')">
+<div class="quick-card" onclick="nouvelleFacture('${id}')">
 
 <i class="fa-solid fa-file-invoice-dollar"></i>
 
@@ -668,8 +897,7 @@ onclick="nouvelleFacture('${id}')">
 
 </div>
 
-<div class="quick-card"
-onclick="nouveauTraitement('${id}')">
+<div class="quick-card" onclick="nouveauTraitement('${id}')">
 
 <i class="fa-solid fa-tooth"></i>
 
@@ -679,8 +907,7 @@ onclick="nouveauTraitement('${id}')">
 
 </div>
 
-<div class="quick-card"
-onclick="ajouterRadiographie('${id}')">
+<div class="quick-card" onclick="ajouterRadiographie('${id}')">
 
 <i class="fa-solid fa-x-ray"></i>
 
@@ -780,11 +1007,8 @@ if(!zone) return;
 zone.innerHTML="";
 
 const q=query(
-
 collection(db,"patients"),
-
 orderBy("dateCreation","desc")
-
 );
 
 const snapshot=await getDocs(q);
@@ -807,9 +1031,9 @@ zone.innerHTML+=`
 
 <div>
 
-<h4>${data.nom}</h4>
+<h4>${escapeHtml(data.nom)}</h4>
 
-<p>${data.telephone}</p>
+<p>${escapeHtml(data.telephone)}</p>
 
 </div>
 
@@ -850,9 +1074,7 @@ csv+=`"${p.nom}","${p.telephone}","${p.email}","${p.sexe}","${p.profession}"\n`;
 });
 
 const blob=new Blob([csv],{
-
 type:"text/csv;charset=utf-8;"
-
 });
 
 const lien=document.createElement("a");
@@ -898,11 +1120,8 @@ let html="";
 const rdv=await getDocs(
 
 query(
-
 collection(db,"rendezvous"),
-
 where("patientId","==",patientId)
-
 )
 
 );
@@ -933,9 +1152,9 @@ html+=`
 
 <div>
 
-<h4>${d.date}</h4>
+<h4>${escapeHtml(d.date)}</h4>
 
-<p>${d.heure}</p>
+<p>${escapeHtml(d.heure)}</p>
 
 </div>
 
@@ -943,7 +1162,7 @@ html+=`
 
 <span class="badge badge-primary">
 
-${d.statut || "En attente"}
+${escapeHtml(d.statut||"En attente")}
 
 </span>
 
@@ -962,11 +1181,8 @@ ${d.statut || "En attente"}
 const ordonnances=await getDocs(
 
 query(
-
 collection(db,"ordonnances"),
-
 where("patientId","==",patientId)
-
 )
 
 );
@@ -999,9 +1215,9 @@ html+=`
 
 <div>
 
-<h4>${d.date}</h4>
+<h4>${escapeHtml(d.date)}</h4>
 
-<p>${d.medecin}</p>
+<p>${escapeHtml(d.medecin)}</p>
 
 </div>
 
@@ -1022,11 +1238,8 @@ html+=`
 const factures=await getDocs(
 
 query(
-
 collection(db,"factures"),
-
 where("patientId","==",patientId)
-
 )
 
 );
@@ -1061,7 +1274,7 @@ html+=`
 
 <h4>${Number(d.montant).toLocaleString()} FCFA</h4>
 
-<p>${d.date}</p>
+<p>${escapeHtml(d.date)}</p>
 
 </div>
 
@@ -1112,9 +1325,7 @@ return;
 }
 
 window.location.href=
-
 "mailto:"+email+
-
 "?subject=Dossier médical Net Sourire";
 
 }
@@ -1136,11 +1347,8 @@ return;
 numero=numero.replace(/\s+/g,"");
 
 window.open(
-
 "https://wa.me/"+numero,
-
 "_blank"
-
 );
 
 }
@@ -1160,15 +1368,10 @@ if(!snap.exists()) return;
 const data=snap.data();
 
 const blob=new Blob(
-
 [JSON.stringify(data,null,2)],
-
 {
-
 type:"application/json"
-
 }
-
 );
 
 const lien=document.createElement("a");
@@ -1186,9 +1389,7 @@ lien.click();
 // ===============================
 
 onSnapshot(
-
 collection(db,"patients"),
-
 ()=>{
 
 const table=document.getElementById("patientsTable");
@@ -1220,6 +1421,34 @@ window.addEventListener("load",()=>{
 chargerStatistiquesPatients();
 
 });
+
+// Fermetures de modales sur la page standalone patients.html
+if(estStandalone){
+
+const fermer=(id)=>{
+
+const modal=document.getElementById(id);
+
+if(modal) modal.style.display="none";
+
+};
+
+
+const croixPatient=document.getElementById("closeModal");
+
+if(croixPatient) croixPatient.addEventListener("click",()=>fermer("patientModal"));
+
+
+const annuler=document.getElementById("annulerPatient");
+
+if(annuler) annuler.addEventListener("click",()=>fermer("patientModal"));
+
+
+const croixDetails=document.getElementById("closePatientDetails");
+
+if(croixDetails) croixDetails.addEventListener("click",()=>fermer("patientDetails"));
+
+}
 
 // ==========================================
 // FIN DU MODULE PATIENTS

@@ -4,8 +4,7 @@
 // PARTIE 1
 // ==========================================
 
-import { db } from "./firebase.js";
-import { storage } from "./firebase.js";
+import { db, storage } from "./firebase.js";
 
 import {
 collection,
@@ -32,7 +31,24 @@ deleteObject
 }
 from "https://www.gstatic.com/firebasejs/12.0.0/firebase-storage.js";
 
+// ==========================================
+// VARIABLES (contexte détecté)
+// ==========================================
+
+// Mode dashboard : contenu dynamique dans #pageContent
+// Mode standalone : table #publicationTable + modales fixes du HTML
 const pageContent=document.getElementById("pageContent");
+const estStandalone=!pageContent;
+
+// Échappement anti-XSS
+function escapeHtml(valeur){
+return String(valeur ?? "")
+.replace(/&/g,"&amp;")
+.replace(/</g,"&lt;")
+.replace(/>/g,"&gt;")
+.replace(/"/g,"&quot;")
+.replace(/'/g,"&#39;");
+}
 
 // ==========================================
 // MENU PUBLICATIONS
@@ -43,7 +59,6 @@ const publicationBtn=document.getElementById("publicationBtn");
 if(publicationBtn){
 
 publicationBtn.addEventListener("click",(e)=>{
-
 e.preventDefault();
 
 ouvrirModulePublications();
@@ -57,6 +72,15 @@ ouvrirModulePublications();
 // ==========================================
 
 export async function ouvrirModulePublications(){
+
+if(estStandalone){
+
+// Page publications.html : la table existe déjà, on ne fait que la charger
+chargerPublications();
+
+return;
+
+}
 
 pageContent.innerHTML=`
 
@@ -87,9 +111,7 @@ class="btn-primary">
 <i class="fa-solid fa-search"></i>
 
 <input
-
 id="recherchePublication"
-
 placeholder="Rechercher une publication...">
 
 </div>
@@ -114,9 +136,16 @@ chargerPublications();
 
 async function chargerPublications(){
 
+const tbody=document.getElementById("publicationTable");
+
+if(!tbody) return;
+
+// En mode dashboard, le gabarit est créé dynamiquement dans #listePublications
+if(!estStandalone){
+
 const zone=document.getElementById("listePublications");
 
-if(!zone) return;
+if(zone){
 
 zone.innerHTML=`
 
@@ -146,16 +175,16 @@ zone.innerHTML=`
 
 `;
 
-const tbody=document.getElementById("publicationTable");
+}
+
+}
+
 
 const snapshot=await getDocs(
 
 query(
-
 collection(db,"publications"),
-
 orderBy("dateCreation","desc")
-
 )
 
 );
@@ -166,30 +195,26 @@ snapshot.forEach((publication)=>{
 
 const p=publication.data();
 
+const url=p.url || p.image;
+
 tbody.innerHTML+=`
 
 <tr>
 
 <td>
 
-<img
-
-src="${p.image}"
-
-style="width:80px;height:80px;object-fit:cover;border-radius:10px;">
+${url?`<img src="${escapeHtml(url)}" style="width:80px;height:80px;object-fit:cover;border-radius:10px;" alt="">`:"-"}
 
 </td>
 
-<td>${p.titre}</td>
+<td>${escapeHtml(p.titre)}</td>
 
-<td>${p.date}</td>
+<td>${escapeHtml(p.date)}</td>
 
 <td>
 
 <button
-
 class="btn btn-success"
-
 onclick="voirPublication('${publication.id}')">
 
 Voir
@@ -197,9 +222,7 @@ Voir
 </button>
 
 <button
-
 class="btn btn-warning"
-
 onclick="modifierPublication('${publication.id}')">
 
 Modifier
@@ -207,9 +230,7 @@ Modifier
 </button>
 
 <button
-
 class="btn btn-danger"
-
 onclick="supprimerPublication('${publication.id}')">
 
 Supprimer
@@ -224,6 +245,24 @@ Supprimer
 
 });
 
+if(snapshot.empty){
+
+tbody.innerHTML=`
+
+<tr>
+
+<td colspan="4" style="text-align:center;padding:30px;">
+
+Aucune publication enregistrée.
+
+</td>
+
+</tr>
+
+`;
+
+}
+
 }
 
 // ==========================================
@@ -231,9 +270,7 @@ Supprimer
 // ==========================================
 
 onSnapshot(
-
 collection(db,"publications"),
-
 ()=>{
 
 const table=document.getElementById("publicationTable");
@@ -272,6 +309,17 @@ ouvrirFormulairePublication();
 
 function ouvrirFormulairePublication(){
 
+if(estStandalone){
+
+// La page publications.html possède déjà #publicationModal et #publicationForm
+const modal=document.getElementById("publicationModal");
+
+if(modal) modal.style.display="flex";
+
+return;
+
+}
+
 pageContent.innerHTML=`
 
 <section class="dashboard-box">
@@ -286,7 +334,7 @@ pageContent.innerHTML=`
 
 </div>
 
-<form id="publicationForm">
+<form id="publicationFormDynamique">
 
 <input
 type="text"
@@ -314,7 +362,7 @@ placeholder="Description"></textarea>
 <input
 type="file"
 id="image"
-accept="image/*"
+accept="image/*,video/*"
 required>
 
 <button
@@ -341,15 +389,11 @@ Retour
 `;
 
 document
-
-.getElementById("publicationForm")
-
+.getElementById("publicationFormDynamique")
 .addEventListener("submit",enregistrerPublication);
 
 document
-
 .getElementById("retourPublication")
-
 .addEventListener("click",ouvrirModulePublications);
 
 }
@@ -362,34 +406,57 @@ async function enregistrerPublication(e){
 
 e.preventDefault();
 
-const fichier=image.files[0];
+let titre="",description="",categorie="",fichier;
+
+if(estStandalone){
+
+// Champs de publications.html
+titre=document.getElementById("titre").value.trim();
+
+description=document.getElementById("description").value.trim();
+
+categorie=document.getElementById("categorie").value;
+
+fichier=document.getElementById("image").files[0];
+
+}else{
+
+titre=document.getElementById("titre").value.trim();
+
+description=document.getElementById("description").value.trim();
+
+categorie=document.getElementById("categorie").value;
+
+fichier=document.getElementById("image").files[0];
+
+}
+
 
 if(!fichier){
 
-alert("Veuillez choisir une image.");
+alert("Veuillez choisir une image ou une vidéo.");
 
 return;
 
 }
 
-const nomFichier=
 
+const extension=fichier.name.split(".").pop().toLowerCase();
+
+const type=(["mp4","webm","mov"].includes(extension))?"video":"image";
+
+const nomFichier=
 Date.now()+"_"+fichier.name;
 
 const chemin=
-
 ref(storage,"publications/"+nomFichier);
 
 await uploadBytes(
-
 chemin,
-
 fichier
-
 );
 
 const url=
-
 await getDownloadURL(chemin);
 
 await addDoc(
@@ -398,13 +465,17 @@ collection(db,"publications"),
 
 {
 
-titre:titre.value,
+titre:titre,
 
-description:description.value,
+description:description,
 
-categorie:categorie.value,
+categorie:categorie,
+
+url:url,
 
 image:url,
+
+type:type,
 
 storagePath:"publications/"+nomFichier,
 
@@ -418,7 +489,22 @@ dateCreation:serverTimestamp()
 
 alert("✅ Publication enregistrée.");
 
+if(estStandalone){
+
+fermerModalStandalone("publicationModal");
+
+}
+
 ouvrirModulePublications();
+
+}
+
+// Ferme un modal en mode standalone
+function fermerModalStandalone(id){
+
+const modal=document.getElementById(id);
+
+if(modal) modal.style.display="none";
 
 }
 
@@ -448,38 +534,35 @@ return;
 
 const p = snap.data();
 
-pageContent.innerHTML = `
+const url=p.url || p.image;
 
-<section class="dashboard-box">
+if(estStandalone){
 
-<div class="box-header">
+// Afficher dans la modale #publicationDetails
+const zone=document.getElementById("publicationInfo");
 
-<h2>📸 ${p.titre}</h2>
+if(zone){
 
-</div>
+zone.innerHTML=`
 
-<img
+<h2>📸 ${escapeHtml(p.titre)}</h2>
 
-src="${p.image}"
-
-style="width:100%;max-height:500px;object-fit:cover;border-radius:15px;">
+${url?`<img src="${escapeHtml(url)}" style="width:100%;max-height:500px;object-fit:cover;border-radius:15px;" alt="">`:""}
 
 <br><br>
 
-<p><strong>Catégorie :</strong> ${p.categorie}</p>
+<p><strong>Catégorie :</strong> ${escapeHtml(p.categorie || "-")}</p>
 
-<p><strong>Date :</strong> ${p.date}</p>
+<p><strong>Date :</strong> ${escapeHtml(p.date)}</p>
 
 <hr>
 
-<p>${p.description}</p>
+<p>${escapeHtml(p.description)}</p>
 
 <br>
 
 <button
-
 class="btn btn-success"
-
 onclick="partagerWhatsApp('${id}')">
 
 💬 WhatsApp
@@ -487,9 +570,59 @@ onclick="partagerWhatsApp('${id}')">
 </button>
 
 <button
-
 class="btn btn-primary"
+onclick="partagerFacebook('${id}')">
 
+📘 Facebook
+
+</button>
+
+`;
+
+}
+
+const modal=document.getElementById("publicationDetails");
+
+if(modal) modal.style.display="flex";
+
+return;
+
+}
+
+pageContent.innerHTML = `
+
+<section class="dashboard-box">
+
+<div class="box-header">
+
+<h2>📸 ${escapeHtml(p.titre)}</h2>
+
+</div>
+
+${url?`<img src="${escapeHtml(url)}" style="width:100%;max-height:500px;object-fit:cover;border-radius:15px;" alt="">`:""}
+
+<br><br>
+
+<p><strong>Catégorie :</strong> ${escapeHtml(p.categorie || "-")}</p>
+
+<p><strong>Date :</strong> ${escapeHtml(p.date)}</p>
+
+<hr>
+
+<p>${escapeHtml(p.description)}</p>
+
+<br>
+
+<button
+class="btn btn-success"
+onclick="partagerWhatsApp('${id}')">
+
+💬 WhatsApp
+
+</button>
+
+<button
+class="btn btn-primary"
 onclick="partagerFacebook('${id}')">
 
 📘 Facebook
@@ -497,9 +630,7 @@ onclick="partagerFacebook('${id}')">
 </button>
 
 <button
-
 class="btn btn-warning"
-
 onclick="ouvrirModulePublications()">
 
 ↩ Retour
@@ -541,6 +672,8 @@ const nouvelleDescription = prompt(
 p.description
 
 );
+
+if(nouvelleDescription===null) return;
 
 await updateDoc(
 
@@ -624,9 +757,7 @@ const texte = encodeURIComponent(
 
 `${p.titre}
 
-${p.description}
-
-${p.image}`
+${p.description}`
 
 );
 
@@ -652,9 +783,11 @@ if(!snap.exists()) return;
 
 const p = snap.data();
 
+const url=p.url || p.image;
+
 window.open(
 
-`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(p.image)}`,
+`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(url)}`,
 
 "_blank"
 
@@ -748,9 +881,9 @@ zone.innerHTML+=`
 
 <div>
 
-<h4>${p.titre}</h4>
+<h4>${escapeHtml(p.titre)}</h4>
 
-<p>${p.date}</p>
+<p>${escapeHtml(p.date)}</p>
 
 </div>
 
@@ -777,6 +910,31 @@ compteurPublications();
 dernieresPublications();
 
 });
+
+// Fermetures de modales sur la page standalone publications.html
+if(estStandalone){
+
+const croixPublication=document.getElementById("closePublicationModal");
+
+if(croixPublication) croixPublication.addEventListener("click",()=>fermerModalStandalone("publicationModal"));
+
+
+const annulerPublication=document.getElementById("annulerPublication");
+
+if(annulerPublication) annulerPublication.addEventListener("click",()=>fermerModalStandalone("publicationModal"));
+
+
+const croixDetails=document.getElementById("closePublicationDetails");
+
+if(croixDetails) croixDetails.addEventListener("click",()=>fermerModalStandalone("publicationDetails"));
+
+
+// Câblage du formulaire de la page standalone
+const form=document.getElementById("publicationForm");
+
+if(form) form.addEventListener("submit",enregistrerPublication);
+
+}
 
 // ==========================================
 // FIN DU MODULE PUBLICATIONS

@@ -26,6 +26,27 @@ serverTimestamp
 // VARIABLES
 // ==========================================
 
+// ==========================================
+// FONCTION D'ECLAPPEMENT ANTI-XSS
+// ==========================================
+
+function escapeHtml(valeur){
+
+return String(valeur ?? "")
+
+.replace(/&/g,"&amp;")
+
+.replace(/</g,"&lt;")
+
+.replace(/>/g,"&gt;")
+
+.replace(/"/g,"&quot;")
+
+.replace(/'/g,"&#39;");
+
+}
+
+
 const form=document.getElementById("rendezvousForm");
 
 const table=document.getElementById("rendezvousTable");
@@ -223,19 +244,19 @@ table.innerHTML+=`
 
 <tr>
 
-<td>${rdv.date}</td>
+<td>${escapeHtml(rdv.date)}</td>
 
-<td>${rdv.heure}</td>
+<td>${escapeHtml(rdv.heure)}</td>
 
-<td>${rdv.dentiste || "-"}</td>
+<td>${escapeHtml(rdv.dentiste || "-")}</td>
 
-<td>${rdv.motif}</td>
+<td>${escapeHtml(rdv.motif)}</td>
 
 <td>
 
-<span class="status ${rdv.statut.toLowerCase().replace(/\s/g,'-')}">
+<span class="status ${escapeHtml(rdv.statut ? rdv.statut.toLowerCase().replace(/\s/g,'-') : "en-attente")}">
 
-${rdv.statut}
+${escapeHtml(rdv.statut)}
 
 </span>
 
@@ -320,23 +341,23 @@ info.innerHTML = `
 
 <div class="details-card">
 
-<h3>${rdv.typeConsultation}</h3>
+<h3>${escapeHtml(rdv.typeConsultation)}</h3>
 
 <hr>
 
-<p><strong>📅 Date :</strong> ${rdv.date}</p>
+<p><strong>📅 Date :</strong> ${escapeHtml(rdv.date)}</p>
 
-<p><strong>🕒 Heure :</strong> ${rdv.heure}</p>
+<p><strong>🕒 Heure :</strong> ${escapeHtml(rdv.heure)}</p>
 
-<p><strong>👨‍⚕️ Dentiste :</strong> ${rdv.dentiste || "À définir"}</p>
+<p><strong>👨‍⚕️ Dentiste :</strong> ${escapeHtml(rdv.dentiste || "À définir")}</p>
 
-<p><strong>📝 Motif :</strong> ${rdv.motif}</p>
+<p><strong>📝 Motif :</strong> ${escapeHtml(rdv.motif)}</p>
 
 <p><strong>📌 Statut :</strong>
 
-<span class="status ${rdv.statut.toLowerCase().replace(/\s/g,'-')}">
+<span class="status ${escapeHtml(rdv.statut ? rdv.statut.toLowerCase().replace(/\s/g,'-') : "en-attente")}">
 
-${rdv.statut}
+${escapeHtml(rdv.statut)}
 
 </span>
 

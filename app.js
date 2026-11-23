@@ -13,44 +13,78 @@ import {
 
 async function chargerPublications() {
 
-    const galerie = document.querySelector(".gallery");
+    // On cible le conteneur réel de la galerie (le contenu statique reste en place)
+    const galerie = document.getElementById("galleryContainer");
 
     if (!galerie) return;
 
-    galerie.innerHTML = "";
-
     const q = query(
         collection(db, "publications"),
-        orderBy("date", "desc")
+        orderBy("dateCreation", "desc")
     );
 
     const snapshot = await getDocs(q);
+
+    // Créer une zone pour les publications dynamiques (après le contenu statique)
+    const zoneDynamique = document.getElementById("gallerieDynamique");
+
+    if (!zoneDynamique) {
+
+        const nouvelleZone = document.createElement("div");
+
+        nouvelleZone.id = "galerieDynamique";
+
+        nouvelleZone.className = "gallery-grid";
+
+        galerie.appendChild(nouvelleZone);
+
+        galerie.classList.remove("gallery-grid");
+
+    }
+
+    const zone = document.getElementById("galerieDynamique");
+
+    zone.innerHTML = "";
 
     snapshot.forEach(doc => {
 
         const data = doc.data();
 
+        if (!data.url) return;
+
         const div = document.createElement("div");
 
-        div.className = "photo";
+        div.className = "gallery-card";
 
-        if (data.type === "image") {
+        const image = document.createElement("img");
 
-            div.innerHTML = `
-                <img src="${data.url}" alt="${data.titre}">
-            `;
+        image.src = data.url;
 
-        } else {
+        image.alt = data.titre || "Publication";
 
-            div.innerHTML = `
-                <video controls width="100%">
-                    <source src="${data.url}">
-                </video>
-            `;
+        image.loading = "lazy";
 
-        }
+        const info = document.createElement("div");
 
-        galerie.appendChild(div);
+        info.className = "gallery-info";
+
+        const titre = document.createElement("h3");
+
+        titre.textContent = data.titre || "";
+
+        const description = document.createElement("p");
+
+        description.textContent = data.description || "";
+
+        info.appendChild(titre);
+
+        info.appendChild(description);
+
+        div.appendChild(image);
+
+        div.appendChild(info);
+
+        zone.appendChild(div);
 
     });
 

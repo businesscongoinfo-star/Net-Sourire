@@ -21,7 +21,24 @@ serverTimestamp,
 onSnapshot
 } from "https://www.gstatic.com/firebasejs/12.0.0/firebase-firestore.js";
 
+// ==========================================
+// VARIABLES (contexte détecté)
+// ==========================================
+
+// Mode dashboard : contenu dynamique dans #pageContent
+// Mode standalone : table #ordonnancesTable + modales fixes du HTML
 const pageContent=document.getElementById("pageContent");
+const estStandalone=!pageContent;
+
+// Échappement anti-XSS
+function escapeHtml(valeur){
+return String(valeur ?? "")
+.replace(/&/g,"&amp;")
+.replace(/</g,"&lt;")
+.replace(/>/g,"&gt;")
+.replace(/"/g,"&quot;")
+.replace(/'/g,"&#39;");
+}
 
 // ==========================================
 // MENU ORDONNANCES
@@ -32,7 +49,6 @@ const ordonnanceBtn=document.getElementById("ordonnanceBtn");
 if(ordonnanceBtn){
 
 ordonnanceBtn.addEventListener("click",(e)=>{
-
 e.preventDefault();
 
 ouvrirModuleOrdonnances();
@@ -46,6 +62,15 @@ ouvrirModuleOrdonnances();
 // ==========================================
 
 export async function ouvrirModuleOrdonnances(){
+
+if(estStandalone){
+
+// Page ordonnance.html : la table existe déjà, on ne fait que la charger
+chargerOrdonnances();
+
+return;
+
+}
 
 pageContent.innerHTML=`
 
@@ -89,9 +114,16 @@ chargerOrdonnances();
 
 async function chargerOrdonnances(){
 
+const tbody=document.getElementById("ordonnancesTable");
+
+if(!tbody) return;
+
+// En mode dashboard, le gabarit est créé dynamiquement dans #listeOrdonnances
+if(!estStandalone){
+
 const zone=document.getElementById("listeOrdonnances");
 
-if(!zone) return;
+if(zone){
 
 zone.innerHTML=`
 
@@ -121,16 +153,16 @@ zone.innerHTML=`
 
 `;
 
-const tbody=document.getElementById("ordonnancesTable");
+}
+
+}
+
 
 const snapshot=await getDocs(
 
 query(
-
 collection(db,"ordonnances"),
-
 orderBy("dateCreation","desc")
-
 )
 
 );
@@ -145,11 +177,11 @@ tbody.innerHTML+=`
 
 <tr>
 
-<td>${data.patient}</td>
+<td>${escapeHtml(data.patient)}</td>
 
-<td>${data.medecin}</td>
+<td>${escapeHtml(data.medecin)}</td>
 
-<td>${data.date}</td>
+<td>${escapeHtml(data.date)}</td>
 
 <td>
 
@@ -185,6 +217,24 @@ Supprimer
 
 });
 
+if(snapshot.empty){
+
+tbody.innerHTML=`
+
+<tr>
+
+<td colspan="4" style="text-align:center;padding:30px;">
+
+Aucune ordonnance enregistrée.
+
+</td>
+
+</tr>
+
+`;
+
+}
+
 }
 
 // ==========================================
@@ -192,9 +242,7 @@ Supprimer
 // ==========================================
 
 onSnapshot(
-
 collection(db,"ordonnances"),
-
 ()=>{
 
 const table=document.getElementById("ordonnancesTable");
@@ -229,6 +277,17 @@ ouvrirFormulaireOrdonnance();
 
 function ouvrirFormulaireOrdonnance(){
 
+if(estStandalone){
+
+// La page ordonnance.html possède déjà #ordonnanceModal et #ordonnanceForm
+const modal=document.getElementById("ordonnanceModal");
+
+if(modal) modal.style.display="flex";
+
+return;
+
+}
+
 pageContent.innerHTML=`
 
 <section class="dashboard-box">
@@ -243,7 +302,7 @@ pageContent.innerHTML=`
 
 </div>
 
-<form id="ordonnanceForm">
+<form id="ordonnanceFormDynamique">
 
 <input
 type="text"
@@ -301,15 +360,11 @@ class="btn btn-warning">
 `;
 
 document
-
-.getElementById("ordonnanceForm")
-
+.getElementById("ordonnanceFormDynamique")
 .addEventListener("submit",enregistrerOrdonnance);
 
 document
-
 .getElementById("retourOrdonnance")
-
 .addEventListener("click",ouvrirModuleOrdonnances);
 
 }
@@ -322,25 +377,61 @@ async function enregistrerOrdonnance(e){
 
 e.preventDefault();
 
+let patient="",medecin="",telephone="",diagnostic="",prescription="",conseils="",date="";
+
+if(estStandalone){
+
+// Champs de ordonnance.html
+patient=document.getElementById("patientNom").value.trim();
+
+telephone=document.getElementById("patientTelephone").value.trim();
+
+medecin=document.getElementById("medecinNom").value.trim();
+
+date=document.getElementById("dateOrdonnance").value;
+
+diagnostic=document.getElementById("diagnostic").value.trim();
+
+prescription=document.getElementById("prescription").value.trim();
+
+conseils=document.getElementById("conseils").value.trim();
+
+}else{
+
+patient=document.getElementById("patient").value.trim();
+
+medecin=document.getElementById("medecin").value.trim();
+
+telephone=document.getElementById("telephone").value.trim();
+
+diagnostic=document.getElementById("diagnostic").value.trim();
+
+prescription=document.getElementById("prescription").value.trim();
+
+conseils=document.getElementById("conseils").value.trim();
+
+}
+
+
 await addDoc(
 
 collection(db,"ordonnances"),
 
 {
 
-patient:patient.value,
+patient:patient,
 
-medecin:medecin.value,
+medecin:medecin,
 
-telephone:telephone.value,
+telephone:telephone,
 
-diagnostic:diagnostic.value,
+diagnostic:diagnostic,
 
-prescription:prescription.value,
+prescription:prescription,
 
-conseils:conseils.value,
+conseils:conseils,
 
-date:new Date().toLocaleDateString(),
+date:date || new Date().toLocaleDateString(),
 
 dateCreation:serverTimestamp()
 
@@ -350,7 +441,22 @@ dateCreation:serverTimestamp()
 
 alert("✅ Ordonnance enregistrée.");
 
+if(estStandalone){
+
+fermerModalStandalone("ordonnanceModal");
+
+}
+
 ouvrirModuleOrdonnances();
+
+}
+
+// Ferme un modal en mode standalone
+function fermerModalStandalone(id){
+
+const modal=document.getElementById(id);
+
+if(modal) modal.style.display="none";
 
 }
 
@@ -382,6 +488,79 @@ return;
 
 const o = snap.data();
 
+if(estStandalone){
+
+// Afficher dans la modale #ordonnanceDetails
+const zone=document.getElementById("ordonnanceInfo");
+
+if(zone){
+
+zone.innerHTML=`
+
+<div class="ordonnance">
+
+<h3>Cabinet Dentaire Net Sourire</h3>
+
+<hr>
+
+<p><strong>Patient :</strong> ${escapeHtml(o.patient)}</p>
+
+<p><strong>Dentiste :</strong> ${escapeHtml(o.medecin)}</p>
+
+<p><strong>Téléphone :</strong> ${escapeHtml(o.telephone || "-")}</p>
+
+<p><strong>Date :</strong> ${escapeHtml(o.date)}</p>
+
+<br>
+
+<h4>Diagnostic</h4>
+
+<p>${escapeHtml(o.diagnostic)}</p>
+
+<br>
+
+<h4>Prescription</h4>
+
+<p>${escapeHtml(o.prescription)}</p>
+
+<br>
+
+<h4>Conseils</h4>
+
+<p>${escapeHtml(o.conseils)}</p>
+
+<br>
+
+<button
+class="btn btn-success"
+onclick="imprimerOrdonnance('${id}')">
+
+🖨 Imprimer
+
+</button>
+
+<button
+class="btn btn-primary"
+onclick="envoyerWhatsAppOrdonnance('${id}')">
+
+💬 WhatsApp
+
+</button>
+
+</div>
+
+`;
+
+}
+
+const modal=document.getElementById("ordonnanceDetails");
+
+if(modal) modal.style.display="flex";
+
+return;
+
+}
+
 pageContent.innerHTML = `
 
 <section class="dashboard-box">
@@ -398,31 +577,31 @@ pageContent.innerHTML = `
 
 <hr>
 
-<p><strong>Patient :</strong> ${o.patient}</p>
+<p><strong>Patient :</strong> ${escapeHtml(o.patient)}</p>
 
-<p><strong>Dentiste :</strong> ${o.medecin}</p>
+<p><strong>Dentiste :</strong> ${escapeHtml(o.medecin)}</p>
 
-<p><strong>Téléphone :</strong> ${o.telephone}</p>
+<p><strong>Téléphone :</strong> ${escapeHtml(o.telephone || "-")}</p>
 
-<p><strong>Date :</strong> ${o.date}</p>
+<p><strong>Date :</strong> ${escapeHtml(o.date)}</p>
 
 <br>
 
 <h4>Diagnostic</h4>
 
-<p>${o.diagnostic}</p>
+<p>${escapeHtml(o.diagnostic)}</p>
 
 <br>
 
 <h4>Prescription</h4>
 
-<p>${o.prescription}</p>
+<p>${escapeHtml(o.prescription)}</p>
 
 <br>
 
 <h4>Conseils</h4>
 
-<p>${o.conseils}</p>
+<p>${escapeHtml(o.conseils)}</p>
 
 <br>
 
@@ -536,6 +715,14 @@ const o = snap.data();
 
 const w = window.open("","_blank");
 
+if(!w){
+
+alert("Veuillez autoriser les fenêtres pop-up pour imprimer.");
+
+return;
+
+}
+
 w.document.write(`
 
 <html>
@@ -600,27 +787,27 @@ color:#0B2D57;
 
 <hr>
 
-<p><strong>Patient :</strong> ${o.patient}</p>
+<p><strong>Patient :</strong> ${escapeHtml(o.patient)}</p>
 
-<p><strong>Dentiste :</strong> ${o.medecin}</p>
+<p><strong>Dentiste :</strong> ${escapeHtml(o.medecin)}</p>
 
-<p><strong>Date :</strong> ${o.date}</p>
+<p><strong>Date :</strong> ${escapeHtml(o.date)}</p>
 
-<p><strong>Téléphone :</strong> ${o.telephone}</p>
+<p><strong>Téléphone :</strong> ${escapeHtml(o.telephone || "-")}</p>
 
 <hr>
 
 <h3>Diagnostic</h3>
 
-<p>${o.diagnostic}</p>
+<p>${escapeHtml(o.diagnostic)}</p>
 
 <h3>Prescription</h3>
 
-<p>${o.prescription}</p>
+<p>${escapeHtml(o.prescription)}</p>
 
 <h3>Conseils</h3>
 
-<p>${o.conseils}</p>
+<p>${escapeHtml(o.conseils)}</p>
 
 <br><br>
 
@@ -828,9 +1015,9 @@ zone.innerHTML+=`
 
 <div>
 
-<h4>${data.patient}</h4>
+<h4>${escapeHtml(data.patient)}</h4>
 
-<p>${data.date}</p>
+<p>${escapeHtml(data.date)}</p>
 
 </div>
 
@@ -870,17 +1057,42 @@ dernieresOrdonnances();
 
 }
 
+);
+
 // ===============================
 // INITIALISATION
 // ===============================
-
-);
 
 window.addEventListener("load",()=>{
 
 compteurOrdonnances();
 
 });
+
+// Fermetures de modales sur la page standalone ordonnance.html
+if(estStandalone){
+
+const croixOrdonnance=document.getElementById("closeOrdonnanceModal");
+
+if(croixOrdonnance) croixOrdonnance.addEventListener("click",()=>fermerModalStandalone("ordonnanceModal"));
+
+
+const annulerOrdonnance=document.getElementById("annulerOrdonnance");
+
+if(annulerOrdonnance) annulerOrdonnance.addEventListener("click",()=>fermerModalStandalone("ordonnanceModal"));
+
+
+const croixDetails=document.getElementById("closeOrdonnanceDetails");
+
+if(croixDetails) croixDetails.addEventListener("click",()=>fermerModalStandalone("ordonnanceDetails"));
+
+
+// Câblage du formulaire de la page standalone
+const form=document.getElementById("ordonnanceForm");
+
+if(form) form.addEventListener("submit",enregistrerOrdonnance);
+
+}
 
 // ==========================================
 // FIN DU MODULE ORDONNANCES

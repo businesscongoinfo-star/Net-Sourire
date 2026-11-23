@@ -4,7 +4,7 @@
 // PARTIE 1
 // ==========================================
 
-import { db } from "./firebase.js";
+import { db, storage } from "./firebase.js";
 
 import {
 doc,
@@ -13,12 +13,12 @@ getDoc,
 serverTimestamp
 } from "https://www.gstatic.com/firebasejs/12.0.0/firebase-firestore.js";
 
-import { storage } from "./firebase.js";
-
 import {
+
 ref,
 uploadBytes,
 getDownloadURL
+
 } from "https://www.gstatic.com/firebasejs/12.0.0/firebase-storage.js";
 
 // ==========================================
@@ -29,6 +29,23 @@ const form = document.getElementById("parametresForm");
 
 const btnSave = document.getElementById("btnEnregistrerParametres");
 
+const champs = {
+
+nomCabinet: document.getElementById("nomCabinet"),
+responsable: document.getElementById("responsable"),
+telephoneCabinet: document.getElementById("telephoneCabinet"),
+emailCabinet: document.getElementById("emailCabinet"),
+adresseCabinet: document.getElementById("adresseCabinet"),
+villeCabinet: document.getElementById("villeCabinet"),
+paysCabinet: document.getElementById("paysCabinet"),
+devise: document.getElementById("devise"),
+descriptionCabinet: document.getElementById("descriptionCabinet"),
+horaires: document.getElementById("horaires"),
+conditions: document.getElementById("conditions"),
+logoCabinet: document.getElementById("logoCabinet")
+
+};
+
 // ==========================================
 // CHARGER PARAMÈTRES
 // ==========================================
@@ -38,36 +55,34 @@ async function chargerParametres(){
 try{
 
 const snap = await getDoc(
-
 doc(db,"configuration","cabinet")
-
 );
 
 if(!snap.exists()) return;
 
 const data = snap.data();
 
-nomCabinet.value = data.nomCabinet || "";
+if(champs.nomCabinet) champs.nomCabinet.value = data.nomCabinet || "";
 
-responsable.value = data.responsable || "";
+if(champs.responsable) champs.responsable.value = data.responsable || "";
 
-telephoneCabinet.value = data.telephoneCabinet || "";
+if(champs.telephoneCabinet) champs.telephoneCabinet.value = data.telephoneCabinet || "";
 
-emailCabinet.value = data.emailCabinet || "";
+if(champs.emailCabinet) champs.emailCabinet.value = data.emailCabinet || "";
 
-adresseCabinet.value = data.adresseCabinet || "";
+if(champs.adresseCabinet) champs.adresseCabinet.value = data.adresseCabinet || "";
 
-villeCabinet.value = data.villeCabinet || "";
+if(champs.villeCabinet) champs.villeCabinet.value = data.villeCabinet || "";
 
-paysCabinet.value = data.paysCabinet || "";
+if(champs.paysCabinet) champs.paysCabinet.value = data.paysCabinet || "";
 
-devise.value = data.devise || "FCFA";
+if(champs.devise) champs.devise.value = data.devise || "FCFA";
 
-descriptionCabinet.value = data.descriptionCabinet || "";
+if(champs.descriptionCabinet) champs.descriptionCabinet.value = data.descriptionCabinet || "";
 
-horaires.value = data.horaires || "";
+if(champs.horaires) champs.horaires.value = data.horaires || "";
 
-conditions.value = data.conditions || "";
+if(champs.conditions) champs.conditions.value = data.conditions || "";
 
 }catch(error){
 
@@ -102,7 +117,7 @@ if(btnSave){
 
 btnSave.addEventListener("click",()=>{
 
-form.requestSubmit();
+if(form) form.requestSubmit();
 
 });
 
@@ -120,14 +135,13 @@ btnSave.innerHTML="Enregistrement...";
 
 let logoURL="";
 
-const fichier=logoCabinet.files[0];
+const fichier=champs.logoCabinet && champs.logoCabinet.files[0];
 
 if(fichier){
 
 const chemin=ref(
 
 storage,
-
 "cabinet/logo.png"
 
 );
@@ -141,27 +155,20 @@ fichier
 );
 
 logoURL=
-
 await getDownloadURL(
-
 chemin
-
 );
 
 }else{
 
 const snap=
-
 await getDoc(
-
 doc(db,"configuration","cabinet")
-
 );
 
 if(snap.exists()){
 
 logoURL=
-
 snap.data().logoURL || "";
 
 }
@@ -174,29 +181,29 @@ doc(db,"configuration","cabinet"),
 
 {
 
-nomCabinet:nomCabinet.value,
+nomCabinet:champs.nomCabinet?champs.nomCabinet.value:"",
 
-responsable:responsable.value,
+responsable:champs.responsable?champs.responsable.value:"",
 
-telephoneCabinet:telephoneCabinet.value,
+telephoneCabinet:champs.telephoneCabinet?champs.telephoneCabinet.value:"",
 
-emailCabinet:emailCabinet.value,
+emailCabinet:champs.emailCabinet?champs.emailCabinet.value:"",
 
-adresseCabinet:adresseCabinet.value,
+adresseCabinet:champs.adresseCabinet?champs.adresseCabinet.value:"",
 
-villeCabinet.value,
+villeCabinet:champs.villeCabinet?champs.villeCabinet.value:"",
 
-paysCabinet:paysCabinet.value,
+paysCabinet:champs.paysCabinet?champs.paysCabinet.value:"",
 
-devise:devise.value,
+devise:champs.devise?champs.devise.value:"FCFA",
 
-descriptionCabinet:descriptionCabinet.value,
+descriptionCabinet:champs.descriptionCabinet?champs.descriptionCabinet.value:"",
 
-horaires:horaires.value,
+horaires:champs.horaires?champs.horaires.value:"",
 
-conditions:conditions.value,
+conditions:champs.conditions?champs.conditions.value:"",
 
-logoURL,
+logoURL:logoURL,
 
 dateModification:serverTimestamp()
 
@@ -251,7 +258,7 @@ if(!fichier) return;
 
 const lecteur=new FileReader();
 
-lecteur.onload=function(evt){
+lecteur.onload=function(evt){\
 
 let apercu=document.getElementById("logoPreview");
 
@@ -272,6 +279,7 @@ apercu.style.marginTop="20px";
 apercu.style.borderRadius="15px";
 
 apercu.style.border="1px solid #ddd";
+
 
 logoInput.parentElement.appendChild(apercu);
 
@@ -295,7 +303,7 @@ window.reinitialiserParametres=function(){
 
 if(confirm("Réinitialiser tous les champs ?")){
 
-form.reset();
+if(form) form.reset();
 
 const apercu=document.getElementById("logoPreview");
 
@@ -340,4 +348,3 @@ chargerParametres();
 // ==========================================
 // FIN PARAMETRES.JS
 // NET SOURIRE V2.0
-// ==========================================

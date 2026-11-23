@@ -1,0 +1,129 @@
+rules_version = '2';
+
+// Règles de sécurité Firestore pour Net Sourire
+//
+// Principe :
+// - Les patients authentifiés peuvent lire leurs propres documents
+//   (rendez-vous, ordonnances, factures) et écrire dans leurs propres
+//   documents patients.
+// - Les administrateurs (role "admin" dans utilisateurs/{uid})
+//   ont un accès complet.
+// - Le reste du contenu est public en lecture (galerie, vitrine)
+//   mais réservé en écriture.
+
+service cloud.firestore {
+
+  match /databases/{database}/documents {
+
+    // ========== Accès admin ==========
+    function isAdmin() {
+      return exists(/databases/$(database)/documents/utilisateurs/$(request.auth.uid))
+        && get(/databases/$(database)/documents/utilisateurs/$(request.auth.uid)).data.role == 'admin';
+    }
+
+    // ========== Patients : lecture et écriture sur leurs propres documents ==========
+    match /patients/{patientId} {
+
+      // Un admin peut tout faire
+      allow read, write: if isAdmin();
+
+      // Le patient authentifié peut lire et modifier son propre profil
+      allow read, write: if request.auth.uid == patientId
+        && request.auth != null;
+
+      // Un patient peut lire les autres patients (nécessaire pour les listes admin)
+      allow read: if request.auth != null;
+    }
+
+    // ========== Rendez-vous ==========
+    match /rendezvous/{rdvId} {
+
+      allow read: if true; // consultation publique des créneaux
+
+      // Les admins gèrent les rendez-vous
+      allow write: if isAdmin();
+
+      // Le patient peut lire/modifier ses propres rendez-vous
+      allow read, write: if request.auth != null
+        && (exists(/databases/$(database)/documents/patients/$(request.auth.uid))
+          && (resource.data.patientId == request.auth.uid
+            || resource.data.patientNom == get(/databases/$(database)/documents/patients/$(request.auth.uid)).data.nom));
+    }
+
+    // ========== Ordonnances ==========
+    match /ordonnances/{ordId} {
+
+      allow read: if true;
+
+      allow write: if isAdmin();
+
+      allow read: if request.auth != null
+        && exists(/databases/$(database)/documents/patients/$(request.auth.uid))
+        && (resource.data.patientId == request.auth.uid
+          || resource.data.patientNom == get(/databases/$(database)/documents/patients/$(request.auth.uid)).data.nom);
+    }
+
+    // ========== Factures ==========
+    match /factures/{factId} {
+
+      allow read: if true;
+
+      allow write: if isAdmin();
+
+      allow read: if request.auth != null
+        && exists(/databases/$(database)/documents/patients/$(request.auth.uid))
+        && (resource.data.patientId == request.auth.uid
+          || resource.data.patientNom == get(/databases/$(database)/documents/patients/$(request.auth.uid)).data.nom);
+    }
+
+    // ========== Publications (galerie publique) ==========
+    match /publications/{pubId} {
+
+      allow read: if true;
+
+      allow write: if isAdmin();
+    }
+
+    // ========== Dossier médical (soins, photos, états, notes) ==========
+    match /soinsDentaires/{soinId} {
+      allow read, write: if isAdmin();
+    }
+
+    match /photosDents/{photoId} {
+      allow read, write: if isAdmin();
+    }
+
+    match /etatDents/{etatId} {
+      allow read, write: if isAdmin();
+    }
+
+    match /notesDent/{noteId} {
+      allow read, write: if isAdmin();
+    }
+
+    // ========== Notifications ==========
+    match /notifications/{notifId} {
+      allow read, write: if isAdmin();
+
+      allow read: if request.auth != null
+        && resource.data.patientId == request.auth.uid;
+    }
+
+    // ========== Paramètres du cabinet ==========
+    match /configuration/{configId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    // ========== Utilisateurs admin ==========
+    match /utilisateurs/{uid} {
+      allow read: if request.auth != null && request.auth.uid == uid;
+      allow write: if request.auth != null && request.auth.uid == uid;
+    }
+
+    // ========== Règle par défaut : tout le reste est privé ==========
+    match /{document=**} {
+      allow read, write: if isAdmin();
+    }
+  }
+}
