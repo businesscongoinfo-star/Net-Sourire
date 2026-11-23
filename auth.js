@@ -77,7 +77,7 @@ if (adminPages.some((page) => window.location.pathname.includes(page))) {
 
       const userDoc = await getDoc(refDoc);
 
-      if (!userDoc.exists() || userDoc.data().role !== "admin") {
+      if (!userDoc.exists() || !["admin","superadmin"].includes(userDoc.data().role)) {
 
         await signOut(auth);
 

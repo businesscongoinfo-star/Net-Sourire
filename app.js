@@ -91,3 +91,20 @@ async function chargerPublications() {
 }
 
 chargerPublications();
+
+// =============================
+// MENU MOBILE (burger)
+// =============================
+const burger = document.getElementById("burger");
+const nav = document.querySelector("nav");
+
+if (burger && nav) {
+  burger.addEventListener("click", () => {
+    nav.classList.toggle("mobile-open");
+  });
+  // Ferme le menu quand on clique sur un lien
+  nav.querySelectorAll("ul a").forEach((a) => {
+    a.addEventListener("click", () => nav.classList.remove("mobile-open"));
+  });
+}
+

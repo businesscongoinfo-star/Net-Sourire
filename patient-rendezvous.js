@@ -61,6 +61,13 @@ const btnAnnuler=document.getElementById("annulerRendezvous");
 
 let patient=null;
 
+// Champs du formulaire
+const champDate=document.getElementById("date");
+const champHeure=document.getElementById("heure");
+const champDentiste=document.getElementById("dentiste");
+const champMotif=document.getElementById("motif");
+const champType=document.getElementById("typeConsultation");
+
 // ==========================================
 // AUTHENTIFICATION
 // ==========================================
@@ -79,6 +86,15 @@ patient=user;
 
 chargerRendezVous();
 
+// Si on arrive avec ?id=... (depuis le dashboard), afficher les details
+const params=new URLSearchParams(window.location.search);
+const idParam=params.get("id");
+if(idParam){
+
+window.voirRendezVous(idParam);
+
+}
+
 });
 
 // ==========================================
@@ -87,19 +103,19 @@ chargerRendezVous();
 
 btnNouveau?.addEventListener("click",()=>{
 
-modal.style.display="flex";
+modal.classList.add("active");
 
 });
 
 btnFermer?.addEventListener("click",()=>{
 
-modal.style.display="none";
+modal.classList.remove("active");
 
 });
 
 btnAnnuler?.addEventListener("click",()=>{
 
-modal.style.display="none";
+modal.classList.remove("active");
 
 });
 
@@ -107,7 +123,7 @@ window.addEventListener("click",(e)=>{
 
 if(e.target===modal){
 
-modal.style.display="none";
+modal.classList.remove("active");
 
 }
 
@@ -143,15 +159,15 @@ patientNom:patient.displayName || "",
 
 patientEmail:patient.email,
 
-date:date.value,
+date:champDate.value,
 
-heure:heure.value,
+heure:champHeure.value,
 
-dentiste:dentiste.value,
+dentiste:champDentiste.value,
 
-typeConsultation:typeConsultation.value,
+typeConsultation:champType.value,
 
-motif:motif.value,
+motif:champMotif.value,
 
 statut:"En attente",
 
@@ -163,7 +179,7 @@ dateCreation:serverTimestamp()
 
 form.reset();
 
-modal.style.display="none";
+modal.classList.remove("active");
 
 alert("✅ Votre demande de rendez-vous a été envoyée.");
 
@@ -367,7 +383,7 @@ ${escapeHtml(rdv.statut)}
 
 `;
 
-document.getElementById("rendezvousDetails").style.display="flex";
+document.getElementById("rendezvousDetails").classList.add("active");
 
 };
 
@@ -377,7 +393,7 @@ document.getElementById("rendezvousDetails").style.display="flex";
 
 document.getElementById("closeDetails")?.addEventListener("click",()=>{
 
-document.getElementById("rendezvousDetails").style.display="none";
+document.getElementById("rendezvousDetails").classList.remove("active");
 
 });
 
@@ -454,7 +470,7 @@ const details=document.getElementById("rendezvousDetails");
 
 if(e.target===details){
 
-details.style.display="none";
+details.classList.remove("active");
 
 }
 
