@@ -60,6 +60,12 @@ ouvrirOdontogramme();
 
 export function ouvrirOdontogramme(patientId=""){
 
+if(window.activerMenu){
+
+window.activerMenu("odontogrammeBtn");
+
+}
+
 let dents="";
 
 for(let i=1;i<=32;i++){

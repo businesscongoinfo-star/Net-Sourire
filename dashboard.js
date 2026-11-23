@@ -12,6 +12,7 @@ getDocs,
 getDoc,
 updateDoc,
 deleteDoc,
+setDoc,
 doc,
 query,
 where,
@@ -717,6 +718,23 @@ remplir("yearIncome", annee);
 }
 
 // ===============================
+// HIGLIGHT DU MENU ACTIEF
+// ===============================
+function activerMenu(idBouton){
+const boutons=document.querySelectorAll(".sidebar ul li");
+boutons.forEach((li)=>{
+const a=li.querySelector("a");
+if(a && a.id===idBouton){
+li.classList.add("active");
+}else{
+li.classList.remove("active");
+}
+});
+}
+
+window.activerMenu=activerMenu;
+
+// ===============================
 // MENU DASHBOARD
 // ===============================
 
@@ -748,6 +766,8 @@ afficherPatients();
 // ===============================
 
 async function afficherPatients(){
+
+activerMenu("patientsBtn");
 
 pageContent.innerHTML=`
 
@@ -1106,6 +1126,8 @@ afficherRendezVous();
 // ===============================
 
 async function afficherRendezVous(){
+
+activerMenu("rdvBtn");
 
 pageContent.innerHTML=`
 
@@ -1575,6 +1597,8 @@ afficherOrdonnances();
 
 async function afficherOrdonnances(){
 
+activerMenu("ordonnanceBtn");
+
 pageContent.innerHTML=`
 
 <section class="dashboard-box">
@@ -1893,6 +1917,8 @@ afficherFactures();
 // ===============================
 
 async function afficherFactures(){
+
+activerMenu("factureBtn");
 
 pageContent.innerHTML=`
 
@@ -2219,6 +2245,8 @@ afficherPublications();
 
 async function afficherPublications(){
 
+activerMenu("publicationBtn");
+
 pageContent.innerHTML=`
 
 <section class="dashboard-box">
@@ -2507,6 +2535,8 @@ afficherParametres();
 
 function afficherParametres(){
 
+activerMenu("parametreBtn");
+
 pageContent.innerHTML=`
 
 <section class="dashboard-box">
@@ -2523,31 +2553,74 @@ Paramètres du Cabinet
 
 <form id="cabinetForm">
 
+<div class="form-group">
+
+<label>Nom du cabinet</label>
+
 <input
 type="text"
+id="paramNomCabinet"
 placeholder="Nom du cabinet">
 
-<input
-type="text"
-placeholder="Nom du dentiste">
+</div>
+
+<div class="form-group">
+
+<label>Nom du dentiste</label>
 
 <input
 type="text"
+id="paramNomDentiste"
+placeholder="Nom du dentiste">
+
+</div>
+
+<div class="form-group">
+
+<label>Téléphone</label>
+
+<input
+type="text"
+id="paramTelephone"
 placeholder="Téléphone">
+
+</div>
+
+<div class="form-group">
+
+<label>Adresse e-mail</label>
 
 <input
 type="email"
+id="paramEmail"
 placeholder="Adresse e-mail">
+
+</div>
+
+<div class="form-group">
+
+<label>Adresse</label>
 
 <input
 type="text"
+id="paramAdresse"
 placeholder="Adresse">
 
+</div>
+
+<div class="form-group">
+
+<label>Description du cabinet</label>
+
 <textarea
+id="paramDescription"
 rows="5"
 placeholder="Description du cabinet"></textarea>
 
+</div>
+
 <button
+type="submit"
 class="btn-primary">
 
 Enregistrer
@@ -2556,9 +2629,115 @@ Enregistrer
 
 </form>
 
+<div id="paramMessage"></div>
+
 </section>
 
 `;
+
+// Câbler le formulaire (créé dynamiquement juste avant)
+
+const cabinetForm=document.getElementById("cabinetForm");
+
+if(cabinetForm){
+
+cabinetForm.addEventListener("submit",sauvegarderParametres);
+
+}
+
+// Remplir le formulaire avec les valeurs existantes
+
+chargerParametres();
+
+}
+
+// ===============================
+
+// PARAMÈTRES DU CABINET
+
+// ===============================
+
+async function chargerParametres(){
+
+try{
+
+const snap=await getDoc(doc(db,"parametres","cabinet"));
+
+if(snap.exists()){
+
+const d=snap.data();
+
+if(d.nomCabinet) document.getElementById("paramNomCabinet").value=d.nomCabinet;
+
+if(d.nomDentiste) document.getElementById("paramNomDentiste").value=d.nomDentiste;
+
+if(d.telephone) document.getElementById("paramTelephone").value=d.telephone;
+
+if(d.email) document.getElementById("paramEmail").value=d.email;
+
+if(d.adresse) document.getElementById("paramAdresse").value=d.adresse;
+
+if(d.description) document.getElementById("paramDescription").value=d.description;
+
+}
+
+}catch(error){
+
+console.error(error);
+
+}
+
+}
+
+async function sauvegarderParametres(e){
+
+e.preventDefault();
+
+try{
+
+await setDoc(doc(db,"parametres","cabinet"),{
+
+nomCabinet:document.getElementById("paramNomCabinet").value.trim(),
+
+nomDentiste:document.getElementById("paramNomDentiste").value.trim(),
+
+telephone:document.getElementById("paramTelephone").value.trim(),
+
+email:document.getElementById("paramEmail").value.trim(),
+
+adresse:document.getElementById("paramAdresse").value.trim(),
+
+description:document.getElementById("paramDescription").value.trim(),
+
+dateModification:serverTimestamp()
+
+});
+
+const msg=document.getElementById("paramMessage");
+
+if(msg){
+
+msg.style.color="green";
+
+msg.textContent="✅ Paramètres du cabinet enregistrés.";
+
+}
+
+}catch(error){
+
+console.error(error);
+
+const msg=document.getElementById("paramMessage");
+
+if(msg){
+
+msg.style.color="red";
+
+msg.textContent="❌ Erreur : "+error.message;
+
+}
+
+}
 
 }
 
@@ -2866,6 +3045,8 @@ style="width:180px;height:180px;object-fit:cover;border-radius:12px;margin:10px;
 // ==========================================
 
 window.afficherCalendrier = async function(){
+
+activerMenu("calendrierRdvBtn");
 
 pageContent.innerHTML = `
 
@@ -3303,6 +3484,8 @@ afficherCaisse();
 
 async function afficherCaisse(){
 
+activerMenu("caisseBtn");
+
 pageContent.innerHTML=`
 
 <section class="dashboard-box">
@@ -3490,6 +3673,8 @@ afficherRapports();
 // ===============================
 
 async function afficherRapports(){
+
+activerMenu("rapportBtn");
 
 pageContent.innerHTML=`
 

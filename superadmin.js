@@ -100,6 +100,12 @@ return;
 
 }
 
+if(window.activerMenu){
+
+window.activerMenu("superAdminBtn");
+
+}
+
 pageContent.innerHTML=`
 
 <section class="dashboard-box">
