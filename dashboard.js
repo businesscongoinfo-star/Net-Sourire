@@ -104,6 +104,380 @@ chargerPatientsDashboard();
 
 chargerRendezVousDashboard();
 
+chargerSectionsAccueil();
+
+}
+
+// ===============================
+// SECTIONS DU DASHBOARD (ACCUEIL)
+// ===============================
+
+// Compte les rendez-vous en attente (notification)
+async function chargerNotifications(){
+
+try{
+
+const snapshot=await getDocs(collection(db,"rendezvous"));
+
+let attente=0;
+
+snapshot.forEach((docu)=>{
+
+const data=docu.data();
+
+if(data.statut==="En attente"){
+
+attente++;
+
+}
+
+});
+
+const badge=document.getElementById("notificationCount");
+
+if(badge){
+
+badge.textContent=attente;
+
+}
+
+}catch(error){
+
+console.error(error);
+
+}
+
+}
+
+// Nouveaux patients du mois en cours
+async function chargerNouveauxPatients(){
+
+try{
+
+const maintenant=new Date();
+
+const snapshot=await getDocs(collection(db,"patients"));
+
+let total=0;
+
+snapshot.forEach((docu)=>{
+
+const data=docu.data();
+
+const dateDoc=getDateDocument(data);
+
+if(dateDoc && dateDoc.getFullYear()===maintenant.getFullYear()
+
+&& dateDoc.getMonth()===maintenant.getMonth()){
+
+total++;
+
+}
+
+});
+
+const zone=document.getElementById("nouveauxPatients");
+
+if(zone){
+
+zone.textContent=total;
+
+}
+
+}catch(error){
+
+console.error(error);
+
+}
+
+}
+
+// Activités récentes (patients, rendez-vous, factures)
+async function chargerActivites(){
+
+const zone=document.getElementById("activityList");
+
+if(!zone) return;
+
+
+let lignes=[];
+
+
+try{
+
+const rdv=await getDocs(collection(db,"rendezvous"));
+
+rdv.forEach((docu)=>{
+
+const data=docu.data();
+
+if(data.dateCreation && typeof data.dateCreation.toDate==="function"){
+
+lignes.push({
+
+date:data.dateCreation.toDate(),
+
+texte:"Rendez-vous : "+(data.patientNom||data.nom||"")
+
+});
+
+}
+
+});
+
+}catch(error){}
+
+
+try{
+
+const factures=await getDocs(collection(db,"factures"));
+
+factures.forEach((docu)=>{
+
+const data=docu.data();
+
+if(data.dateCreation && typeof data.dateCreation.toDate==="function"){
+
+lignes.push({
+
+date:data.dateCreation.toDate(),
+
+texte:"Facture : "+(data.patient||"")
+
+});
+
+}
+
+});
+
+}catch(error){}
+
+
+try{
+
+const patients=await getDocs(collection(db,"patients"));
+
+patients.forEach((docu)=>{
+
+const data=docu.data();
+
+if(data.dateCreation && typeof data.dateCreation.toDate==="function"){
+
+lignes.push({
+
+date:data.dateCreation.toDate(),
+
+texte:"Patient : "+(data.nom||"")
+
+});
+
+}
+
+});
+
+}catch(error){}
+
+
+lignes.sort((a,b)=>b.date-a.date);
+
+lignes=lignes.slice(0,6);
+
+
+if(lignes.length===0){
+
+zone.innerHTML="<p>Aucune activité pour le moment.</p>";
+
+return;
+
+}
+
+
+zone.innerHTML="";
+
+lignes.forEach((ligne)=>{
+
+zone.innerHTML+=`
+
+<div class="activity-item">
+
+<div class="activity-left">
+
+<i class="fa-solid fa-circle-dot"></i>
+
+<div>
+
+<h4>${escapeHtml(ligne.texte)}</h4>
+
+<small>${ligne.date.toLocaleDateString()}</small>
+
+</div>
+
+</div>
+
+</div>
+
+`;
+
+});
+
+}
+
+// Mini calendrier (rendez-vous du mois)
+async function chargerMiniCalendrier(){
+
+const zone=document.getElementById("calendar");
+
+if(!zone) return;
+
+
+try{
+
+const maintenant=new Date();
+
+const snapshot=await getDocs(collection(db,"rendezvous"));
+
+const parJour={};
+
+snapshot.forEach((docu)=>{
+
+const data=docu.data();
+
+if(!data.date) return;
+
+if(!parJour[data.date]) parJour[data.date]=0;
+
+parJour[data.date]++;
+
+});
+
+
+const debutMois=new Date(maintenant.getFullYear(),maintenant.getMonth(),1);
+
+const joursMois=new Date(maintenant.getFullYear(),maintenant.getMonth()+1,0).getDate();
+
+
+let html=`
+
+<div class="mini-calendar">
+
+<div class="mini-calendar-header">
+
+<strong>${debutMois.toLocaleDateString(undefined,{month:"long",year:"numeric"})}</strong>
+
+</div>
+
+<div class="mini-calendar-grid">
+
+`;
+
+
+for(let i=0;i<debutMois.getDay();i++){
+
+html+="<div class=\"mini-day empty\"></div>";
+
+}
+
+
+for(let jour=1;jour<=joursMois;jour++){
+
+const dateStr=`${maintenant.getFullYear()}-${String(maintenant.getMonth()+1).padStart(2,"0")}-${String(jour).padStart(2,"0")}`;
+
+const compte=parJour[dateStr]||0;
+
+html+=`<div class="mini-day">${jour}${compte>0?`<span class="mini-badge">${compte}</span>`:""}</div>`;
+
+}
+
+
+html+=`
+
+</div>
+
+</div>
+
+`;
+
+zone.innerHTML=html;
+
+}catch(error){
+
+console.error(error);
+
+}
+
+}
+
+// Notifications du tableau de bord
+async function chargerNotificationsList(){
+
+const zone=document.getElementById("notificationsList");
+
+if(!zone) return;
+
+
+try{
+
+const snapshot=await getDocs(collection(db,"rendezvous"));
+
+const rdv=snapshot.docs
+
+.map((docu)=>({id:docu.id,data:docu.data()}))
+
+.filter((item)=>item.data.statut==="En attente")
+
+.sort((a,b)=>String(b.data.date||"").localeCompare(String(a.data.date||"")))
+
+.slice(0,5);
+
+
+if(rdv.length===0){
+
+zone.innerHTML="<li>Aucune notification pour le moment.</li>";
+
+return;
+
+}
+
+
+zone.innerHTML="";
+
+rdv.forEach((item)=>{
+
+const data=item.data;
+
+zone.innerHTML+=`
+
+<li>
+
+Rendez-vous en attente — ${escapeHtml(data.patientNom||data.nom||"")} (${escapeHtml(data.date||"")})
+
+</li>
+
+`;
+
+});
+
+}catch(error){
+
+console.error(error);
+
+}
+
+}
+
+// Charge toutes les sections de l'accueil
+async function chargerSectionsAccueil(){
+
+chargerNotifications();
+
+chargerNouveauxPatients();
+
+chargerActivites();
+
+chargerMiniCalendrier();
+
+chargerNotificationsList();
+
 }
 
 chargerDashboard();
@@ -2192,6 +2566,13 @@ Enregistrer
 // DÉCONNEXION
 // ===============================
 
+// Retour à l'accueil du dashboard (recharge la page)
+window.afficherDashboard = function(){
+
+location.reload();
+
+};
+
 const logout=document.getElementById("logoutBtn");
 
 if(logout){
@@ -2562,6 +2943,345 @@ e.preventDefault();
 afficherCalendrier();
 
 });
+
+// Bouton "Nouveau Rendez-vous" de l'accueil
+const nouveauRdvBtn=document.getElementById("nouveauRdvBtn");
+
+if(nouveauRdvBtn){
+
+nouveauRdvBtn.addEventListener("click",(e)=>{
+
+e.preventDefault();
+
+nouveauRendezVous();
+
+});
+
+}
+
+// Bouton "Calendrier" du menu (sidebar)
+const calendrierRdvBtn=document.getElementById("calendrierRdvBtn");
+
+if(calendrierRdvBtn){
+
+calendrierRdvBtn.addEventListener("click",(e)=>{
+
+e.preventDefault();
+
+afficherCalendrier();
+
+});
+
+}
+
+// Bell de notification
+const notificationBtn=document.getElementById("notificationBtn");
+
+if(notificationBtn){
+
+notificationBtn.addEventListener("click",(e)=>{
+
+e.preventDefault();
+
+afficherNotifications();
+
+});
+
+}
+
+// ===============================
+// SECTION NOTIFICATIONS
+// ===============================
+
+async function afficherNotifications(){
+
+pageContent.innerHTML=`
+
+<section class="dashboard-box">
+
+<div class="box-header">
+
+<h2>
+
+Notifications
+
+</h2>
+
+<button
+class="btn btn-warning"
+onclick="afficherDashboard()">
+
+↩ Retour au tableau de bord
+
+</button>
+
+</div>
+
+<div class="notifications-list">
+
+<h3>Rendez-vous en attente</h3>
+
+<ul id="notificationsList">
+
+<li>Chargement...</li>
+
+</ul>
+
+</div>
+
+</section>
+
+`;
+
+chargerNotificationsList();
+
+}
+
+// ===============================
+// NOUVEAU RENDEZ-VOUS
+// ===============================
+
+function nouveauRendezVous(){
+
+pageContent.innerHTML=`
+
+<section class="dashboard-box">
+
+<div class="box-header">
+
+<h2>
+
+Nouveau Rendez-vous
+
+</h2>
+
+<button
+class="btn btn-warning"
+onclick="afficherRendezVous()">
+
+↩ Retour
+
+</button>
+
+</div>
+
+<form id="nouveauRdvForm">
+
+<div class="form-grid">
+
+<div class="form-group">
+
+<label>Nom du patient</label>
+
+<input
+type="text"
+id="rdvNom"
+placeholder="Nom du patient"
+required>
+
+</div>
+
+<div class="form-group">
+
+<label>Téléphone</label>
+
+<input
+type="tel"
+id="rdvTelephone"
+placeholder="Téléphone"
+required>
+
+</div>
+
+<div class="form-group">
+
+<label>Email</label>
+
+<input
+type="email"
+id="rdvEmail"
+placeholder="Adresse e-mail">
+
+</div>
+
+<div class="form-group">
+
+<label>Date</label>
+
+<input
+type="date"
+id="rdvDate"
+required>
+
+</div>
+
+<div class="form-group">
+
+<label>Heure</label>
+
+<input
+type="time"
+id="rdvHeure"
+required>
+
+</div>
+
+<div class="form-group">
+
+<label>Type de consultation</label>
+
+<select id="rdvType">
+
+<option>Consultation</option>
+
+<option>Détartrage</option>
+
+<option>Soin dentaire</option>
+
+<option>Extraction</option>
+
+<option>Implant</option>
+
+<option>Orthodontie</option>
+
+<option>Contrôle</option>
+
+<option>Urgence</option>
+
+</select>
+
+</div>
+
+<div class="form-group full-width">
+
+<label>Motif</label>
+
+<textarea
+id="rdvMotif"
+rows="3"
+placeholder="Motif du rendez-vous"></textarea>
+
+</div>
+
+</div>
+
+<div class="actions">
+
+<button
+type="submit"
+class="btn-primary">
+
+Enregistrer
+
+</button>
+
+</div>
+
+</form>
+
+</section>
+
+`;
+
+document
+.getElementById("nouveauRdvForm")
+.addEventListener("submit",async(e)=>{
+
+e.preventDefault();
+
+
+const nom=document.getElementById("rdvNom").value.trim();
+
+const telephone=document.getElementById("rdvTelephone").value.trim();
+
+const email=document.getElementById("rdvEmail").value.trim();
+
+const date=document.getElementById("rdvDate").value;
+
+const heure=document.getElementById("rdvHeure").value;
+
+const type=document.getElementById("rdvType").value;
+
+const motif=document.getElementById("rdvMotif").value.trim();
+
+
+// Lien au patient existant si possible
+
+let patientId="";
+
+if(nom){
+
+try{
+
+const qPatients=query(
+
+collection(db,"patients"),
+
+where("nom","==",nom)
+
+);
+
+const snapPatients=await getDocs(qPatients);
+
+if(!snapPatients.empty){
+
+patientId=snapPatients.docs[0].id;
+
+}
+
+}catch(error){
+
+console.error(error);
+
+}
+
+}
+
+
+await addDoc(
+
+collection(db,"rendezvous"),
+
+{
+
+patientId:patientId,
+
+patientNom:nom,
+
+patientEmail:email,
+
+telephone:telephone,
+
+date:date,
+
+heure:heure,
+
+typeConsultation:type,
+
+motif:motif,
+
+statut:"En attente",
+
+dateCreation:serverTimestamp()
+
+}
+
+);
+
+
+alert("✅ Rendez-vous enregistré.");
+
+afficherRendezVous();
+
+chargerRendezVousDashboard();
+
+chargerSectionsAccueil();
+
+chargerStatistiques();
+
+});
+
+}
 // ==========================================
 // DASHBOARD.JS - PARTIE 13
 // GESTION DES PAIEMENTS & CAISSE
