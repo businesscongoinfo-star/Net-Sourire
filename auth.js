@@ -1,10 +1,15 @@
-import { auth } from "./firebase.js";
+import { auth, db } from "./firebase.js";
 
 import {
   signInWithEmailAndPassword,
   onAuthStateChanged,
   signOut
 } from "https://www.gstatic.com/firebasejs/12.0.0/firebase-auth.js";
+
+import {
+  doc,
+  getDoc
+} from "https://www.gstatic.com/firebasejs/12.0.0/firebase-firestore.js";
 
 // ===============================
 // CONNEXION ADMIN
@@ -55,9 +60,34 @@ const adminPages = [
 
 if (adminPages.some((page) => window.location.pathname.includes(page))) {
 
-  onAuthStateChanged(auth, (user) => {
+  onAuthStateChanged(auth, async (user) => {
 
     if (!user) {
+
+      window.location.href = "login.html";
+
+      return;
+
+    }
+
+    // Vérifier que l'utilisateur a bien le rôle administrateur
+    try {
+
+      const refDoc = doc(db, "utilisateurs", user.uid);
+
+      const userDoc = await getDoc(refDoc);
+
+      if (!userDoc.exists() || !["admin","superadmin"].includes(userDoc.data().role)) {
+
+        await signOut(auth);
+
+        window.location.href = "login.html";
+
+      }
+
+    } catch (error) {
+
+      await signOut(auth);
 
       window.location.href = "login.html";
 
@@ -84,3 +114,12 @@ if (logoutBtn) {
   });
 
 }
+
+// Fonction globale de déconnexion (utilisée par le menu des pages admin)
+window.deconnexion = async function(){
+
+  await signOut(auth);
+
+  window.location.href = "login.html";
+
+};

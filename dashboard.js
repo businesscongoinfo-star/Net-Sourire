@@ -3,7 +3,7 @@
 // NET SOURIRE
 // ==========================================
 
-import { db } from "./firebase.js";
+import { db, auth, storage } from "./firebase.js";
 
 import {
 collection,
@@ -12,12 +12,24 @@ getDocs,
 getDoc,
 updateDoc,
 deleteDoc,
+setDoc,
 doc,
 query,
+where,
 orderBy,
 serverTimestamp,
 onSnapshot
 } from "https://www.gstatic.com/firebasejs/12.0.0/firebase-firestore.js";
+
+import {
+signOut
+} from "https://www.gstatic.com/firebasejs/12.0.0/firebase-auth.js";
+
+import {
+ref,
+uploadBytes,
+getDownloadURL
+} from "https://www.gstatic.com/firebasejs/12.0.0/firebase-storage.js";
 
 // ===============================
 // VARIABLES
@@ -32,6 +44,56 @@ const totalFactures = document.getElementById("totalFactures");
 const totalRecettes = document.getElementById("totalRecettes");
 
 // ===============================
+// UTILITAIRES
+// ===============================
+
+// Échappe les données venant de Firestore avant injection HTML (anti-XSS)
+function escapeHtml(valeur){
+return String(valeur ?? "")
+.replace(/&/g,"&amp;")
+.replace(/</g,"&lt;")
+.replace(/>/g,"&gt;")
+.replace(/"/g,"&quot;")
+.replace(/'/g,"&#39;");
+}
+
+// Récupère la date d'un document (dateCreation prioritaire, sinon date texte)
+function getDateDocument(data){
+if(data.dateCreation && typeof data.dateCreation.toDate === "function"){
+return data.dateCreation.toDate();
+}
+if(data.date){
+const parties = String(data.date).split("/");
+if(parties.length === 3){
+return new Date(Number(parties[2]), Number(parties[1]) - 1, Number(parties[0]));
+}
+const d = new Date(data.date);
+if(!isNaN(d)) return d;
+}
+return null;
+}
+
+function memeJour(a,b){
+return a.getFullYear() === b.getFullYear()
+&& a.getMonth() === b.getMonth()
+&& a.getDate() === b.getDate();
+}
+
+function memeSemaine(a,b){
+const debut = new Date(b);
+debut.setDate(b.getDate() - ((b.getDay() + 6) % 7));
+debut.setHours(0,0,0,0);
+const fin = new Date(debut);
+fin.setDate(debut.getDate() + 6);
+fin.setHours(23,59,59,999);
+return a >= debut && a <= fin;
+}
+
+function memeMois(a,b){
+return a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth();
+}
+
+// ===============================
 // TABLEAU DE BORD
 // ===============================
 
@@ -43,9 +105,520 @@ chargerPatientsDashboard();
 
 chargerRendezVousDashboard();
 
+chargerSectionsAccueil();
+
+}
+
+// ===============================
+// SECTIONS DU DASHBOARD (ACCUEIL)
+// ===============================
+
+// Compte les rendez-vous en attente (notification)
+async function chargerNotifications(){
+
+try{
+
+const snapshot=await getDocs(collection(db,"rendezvous"));
+
+let attente=0;
+
+snapshot.forEach((docu)=>{
+
+const data=docu.data();
+
+if(data.statut==="En attente"){
+
+attente++;
+
+}
+
+});
+
+const badge=document.getElementById("notificationCount");
+
+if(badge){
+
+badge.textContent=attente;
+
+}
+
+}catch(error){
+
+console.error(error);
+
+}
+
+}
+
+// Nouveaux patients du mois en cours
+async function chargerNouveauxPatients(){
+
+try{
+
+const maintenant=new Date();
+
+const snapshot=await getDocs(collection(db,"patients"));
+
+let total=0;
+
+snapshot.forEach((docu)=>{
+
+const data=docu.data();
+
+const dateDoc=getDateDocument(data);
+
+if(dateDoc && dateDoc.getFullYear()===maintenant.getFullYear()
+
+&& dateDoc.getMonth()===maintenant.getMonth()){
+
+total++;
+
+}
+
+});
+
+const zone=document.getElementById("nouveauxPatients");
+
+if(zone){
+
+zone.textContent=total;
+
+}
+
+}catch(error){
+
+console.error(error);
+
+}
+
+}
+
+// Activités récentes (patients, rendez-vous, factures)
+async function chargerActivites(){
+
+const zone=document.getElementById("activityList");
+
+if(!zone) return;
+
+
+let lignes=[];
+
+
+try{
+
+const rdv=await getDocs(collection(db,"rendezvous"));
+
+rdv.forEach((docu)=>{
+
+const data=docu.data();
+
+if(data.dateCreation && typeof data.dateCreation.toDate==="function"){
+
+lignes.push({
+
+date:data.dateCreation.toDate(),
+
+texte:"Rendez-vous : "+(data.patientNom||data.nom||"")
+
+});
+
+}
+
+});
+
+}catch(error){}
+
+
+try{
+
+const factures=await getDocs(collection(db,"factures"));
+
+factures.forEach((docu)=>{
+
+const data=docu.data();
+
+if(data.dateCreation && typeof data.dateCreation.toDate==="function"){
+
+lignes.push({
+
+date:data.dateCreation.toDate(),
+
+texte:"Facture : "+(data.patient||"")
+
+});
+
+}
+
+});
+
+}catch(error){}
+
+
+try{
+
+const patients=await getDocs(collection(db,"patients"));
+
+patients.forEach((docu)=>{
+
+const data=docu.data();
+
+if(data.dateCreation && typeof data.dateCreation.toDate==="function"){
+
+lignes.push({
+
+date:data.dateCreation.toDate(),
+
+texte:"Patient : "+(data.nom||"")
+
+});
+
+}
+
+});
+
+}catch(error){}
+
+
+lignes.sort((a,b)=>b.date-a.date);
+
+lignes=lignes.slice(0,6);
+
+
+if(lignes.length===0){
+
+zone.innerHTML="<p>Aucune activité pour le moment.</p>";
+
+return;
+
+}
+
+
+zone.innerHTML="";
+
+lignes.forEach((ligne)=>{
+
+zone.innerHTML+=`
+
+<div class="activity-item">
+
+<div class="activity-left">
+
+<i class="fa-solid fa-circle-dot"></i>
+
+<div>
+
+<h4>${escapeHtml(ligne.texte)}</h4>
+
+<small>${ligne.date.toLocaleDateString()}</small>
+
+</div>
+
+</div>
+
+</div>
+
+`;
+
+});
+
+}
+
+// Mini calendrier (rendez-vous du mois)
+async function chargerMiniCalendrier(){
+
+const zone=document.getElementById("calendar");
+
+if(!zone) return;
+
+
+try{
+
+const maintenant=new Date();
+
+const snapshot=await getDocs(collection(db,"rendezvous"));
+
+const parJour={};
+
+snapshot.forEach((docu)=>{
+
+const data=docu.data();
+
+if(!data.date) return;
+
+if(!parJour[data.date]) parJour[data.date]=0;
+
+parJour[data.date]++;
+
+});
+
+
+const debutMois=new Date(maintenant.getFullYear(),maintenant.getMonth(),1);
+
+const joursMois=new Date(maintenant.getFullYear(),maintenant.getMonth()+1,0).getDate();
+
+
+let html=`
+
+<div class="mini-calendar">
+
+<div class="mini-calendar-header">
+
+<strong>${debutMois.toLocaleDateString(undefined,{month:"long",year:"numeric"})}</strong>
+
+</div>
+
+<div class="mini-calendar-grid">
+
+`;
+
+
+for(let i=0;i<debutMois.getDay();i++){
+
+html+="<div class=\"mini-day empty\"></div>";
+
+}
+
+
+for(let jour=1;jour<=joursMois;jour++){
+
+const dateStr=`${maintenant.getFullYear()}-${String(maintenant.getMonth()+1).padStart(2,"0")}-${String(jour).padStart(2,"0")}`;
+
+const compte=parJour[dateStr]||0;
+
+html+=`<div class="mini-day">${jour}${compte>0?`<span class="mini-badge">${compte}</span>`:""}</div>`;
+
+}
+
+
+html+=`
+
+</div>
+
+</div>
+
+`;
+
+zone.innerHTML=html;
+
+}catch(error){
+
+console.error(error);
+
+}
+
+}
+
+// Notifications du tableau de bord
+async function chargerNotificationsList(){
+
+const zone=document.getElementById("notificationsList");
+
+if(!zone) return;
+
+
+try{
+
+const snapshot=await getDocs(collection(db,"rendezvous"));
+
+const rdv=snapshot.docs
+
+.map((docu)=>({id:docu.id,data:docu.data()}))
+
+.filter((item)=>item.data.statut==="En attente")
+
+.sort((a,b)=>String(b.data.date||"").localeCompare(String(a.data.date||"")))
+
+.slice(0,5);
+
+
+if(rdv.length===0){
+
+zone.innerHTML="<li>Aucune notification pour le moment.</li>";
+
+return;
+
+}
+
+
+zone.innerHTML="";
+
+rdv.forEach((item)=>{
+
+const data=item.data;
+
+zone.innerHTML+=`
+
+<li>
+
+Rendez-vous en attente — ${escapeHtml(data.patientNom||data.nom||"")} (${escapeHtml(data.date||"")})
+
+</li>
+
+`;
+
+});
+
+}catch(error){
+
+console.error(error);
+
+}
+
+}
+
+// Charge toutes les sections de l'accueil
+async function chargerSectionsAccueil(){
+
+chargerNotifications();
+
+chargerNouveauxPatients();
+
+chargerActivites();
+
+chargerMiniCalendrier();
+
+chargerNotificationsList();
+
 }
 
 chargerDashboard();
+
+// ===============================
+// PATIENTS RÉCENTS (ACCUEIL DASHBOARD)
+// ===============================
+
+async function chargerPatientsDashboard(){
+
+const tbody = document.getElementById("patientsRecentsTable");
+
+if(!tbody) return;
+
+tbody.innerHTML = "";
+
+const q = query(
+collection(db,"patients"),
+orderBy("dateCreation","desc")
+);
+
+const snapshot = await getDocs(q);
+
+let compteur = 0;
+
+snapshot.forEach((patient)=>{
+
+if(compteur >= 5) return;
+
+compteur++;
+
+const data = patient.data();
+
+tbody.innerHTML += `
+
+<tr>
+
+<td>${escapeHtml(data.nom || "")}</td>
+
+<td>${escapeHtml(data.telephone || "—")}</td>
+
+<td>${escapeHtml(data.dateCreation && typeof data.dateCreation.toDate === "function" ? data.dateCreation.toDate().toLocaleDateString() : "—")}</td>
+
+<td>
+
+<button
+class="btn btn-success"
+onclick="ouvrirDossierPatient('${patient.id}')">
+Dossier
+</button>
+
+</td>
+
+</tr>
+
+`;
+
+});
+
+}
+
+// ===============================
+// RENDEZ-VOUS DU JOUR (ACCUEIL DASHBOARD)
+// ===============================
+
+async function chargerRendezVousDashboard(){
+
+const tbody = document.getElementById("tableRendezVous");
+
+if(!tbody) return;
+
+tbody.innerHTML = "";
+
+const aujourdhui = new Date().toISOString().split("T")[0];
+
+const q = query(
+collection(db,"rendezvous"),
+orderBy("dateCreation","desc")
+);
+
+const snapshot = await getDocs(q);
+
+let compteur = 0;
+
+snapshot.forEach((rdv)=>{
+
+if(compteur >= 10) return;
+
+const data = rdv.data();
+
+// Ne garder que les rendez-vous du jour (date au format AAAA-MM-JJ)
+if(data.date && data.date !== aujourdhui) return;
+
+compteur++;
+
+tbody.innerHTML += `
+
+<tr>
+
+<td>${escapeHtml(data.patientNom || data.nom || "")}</td>
+
+<td>${escapeHtml(data.telephone || data.patientEmail || "—")}</td>
+
+<td>${escapeHtml(data.date || "")}</td>
+
+<td>${escapeHtml(data.heure || "")}</td>
+
+<td>
+
+<span class="badge badge-primary">
+
+${escapeHtml(data.statut || "En attente")}
+
+</span>
+
+</td>
+
+<td>
+
+<button
+class="btn btn-success"
+onclick="accepterRdv('${rdv.id}')">
+Accepter
+</button>
+
+<button
+class="btn btn-danger"
+onclick="refuserRdv('${rdv.id}')">
+Refuser
+</button>
+
+</td>
+
+</tr>
+
+`;
+
+});
+
+}
 
 // ===============================
 // STATISTIQUES
@@ -87,11 +660,35 @@ const snapshot = await getDocs(collection(db,"factures"));
 
 let total = 0;
 
-snapshot.forEach(doc=>{
+let jour = 0;
 
-const data = doc.data();
+let semaine = 0;
 
-total += Number(data.montant || 0);
+let mois = 0;
+
+let annee = 0;
+
+const maintenant = new Date();
+
+snapshot.forEach(docu=>{
+
+const data = docu.data();
+
+const montant = Number(data.montant || 0);
+
+total += montant;
+
+const dateDoc = getDateDocument(data);
+
+if(!dateDoc) return;
+
+if(memeJour(dateDoc, maintenant)) jour += montant;
+
+if(memeSemaine(dateDoc, maintenant)) semaine += montant;
+
+if(memeMois(dateDoc, maintenant)) mois += montant;
+
+if(dateDoc.getFullYear() === maintenant.getFullYear()) annee += montant;
 
 });
 
@@ -102,7 +699,40 @@ total.toLocaleString()+" FCFA";
 
 }
 
+const remplir = (id, valeur)=>{
+
+const el = document.getElementById(id);
+
+if(el) el.innerHTML = valeur.toLocaleString()+" FCFA";
+
+};
+
+remplir("todayIncome", jour);
+
+remplir("weekIncome", semaine);
+
+remplir("monthIncome", mois);
+
+remplir("yearIncome", annee);
+
 }
+
+// ===============================
+// HIGLIGHT DU MENU ACTIEF
+// ===============================
+function activerMenu(idBouton){
+const boutons=document.querySelectorAll(".sidebar ul li");
+boutons.forEach((li)=>{
+const a=li.querySelector("a");
+if(a && a.id===idBouton){
+li.classList.add("active");
+}else{
+li.classList.remove("active");
+}
+});
+}
+
+window.activerMenu=activerMenu;
 
 // ===============================
 // MENU DASHBOARD
@@ -136,6 +766,8 @@ afficherPatients();
 // ===============================
 
 async function afficherPatients(){
+
+activerMenu("patientsBtn");
 
 pageContent.innerHTML=`
 
@@ -204,6 +836,9 @@ chargerPatients();
 
 }
 
+// Exposé globalement : utilisé par les boutons onclick des gabarits
+window.afficherPatients = afficherPatients;
+
 // ===============================
 // CHARGER LES PATIENTS
 // ===============================
@@ -234,13 +869,13 @@ tbody.innerHTML+=`
 
 <tr>
 
-<td>${data.nom || ""}</td>
+<td>${escapeHtml(data.nom || "")}</td>
 
-<td>${data.telephone || ""}</td>
+<td>${escapeHtml(data.telephone || "")}</td>
 
-<td>${data.email || ""}</td>
+<td>${escapeHtml(data.email || "")}</td>
 
-<td>${data.sexe || ""}</td>
+<td>${escapeHtml(data.sexe || "")}</td>
 
 <td>
 
@@ -360,45 +995,39 @@ window.voirPatient = async function(id){
 
 <br>
 
-<p><b>Nom :</b> ${p.nom}</p>
+<p><b>Nom :</b> ${escapeHtml(p.nom)}</p>
 
-<p><b>Téléphone :</b> ${p.telephone}</p>
+<p><b>Téléphone :</b> ${escapeHtml(p.telephone)}</p>
 
-<p><b>Email :</b> ${p.email}</p>
+<p><b>Email :</b> ${escapeHtml(p.email)}</p>
 
-<p><b>Sexe :</b> ${p.sexe}</p>
+<p><b>Sexe :</b> ${escapeHtml(p.sexe)}</p>
 
-<p><b>Adresse :</b> ${p.adresse}</p>
+<p><b>Adresse :</b> ${escapeHtml(p.adresse)}</p>
 
-<p><b>Date de naissance :</b> ${p.naissance}</p>
+<p><b>Date de naissance :</b> ${escapeHtml(p.naissance || p.dateNaissance)}</p>
 
 <br>
 
 <button
 class="btn btn-primary"
 onclick="afficherPatients()">
+Retour
+</button>
 
 <button
 class="btn btn-primary"
 onclick="nouveauTraitement('${id}')">
-
 ➕ Ajouter un traitement
-
 </button>
 
 <button
 class="btn btn-info"
 onclick="ajouterRadiographie('${id}')">
-
 📷 Ajouter une radiographie
-
 </button>
 
 <div id="listeRadiographies"></div>
-
-Retour
-
-</button>
 
 </section>
 
@@ -498,6 +1127,8 @@ afficherRendezVous();
 
 async function afficherRendezVous(){
 
+activerMenu("rdvBtn");
+
 pageContent.innerHTML=`
 
 <section class="dashboard-box">
@@ -580,21 +1211,21 @@ tbody.innerHTML+=`
 
 <tr>
 
-<td>${data.nom}</td>
+<td>${escapeHtml(data.patientNom || data.nom || "")}</td>
 
-<td>${data.telephone}</td>
+<td>${escapeHtml(data.telephone || data.patientEmail || "—")}</td>
 
-<td>${data.date}</td>
+<td>${escapeHtml(data.date || "")}</td>
 
-<td>${data.heure}</td>
+<td>${escapeHtml(data.heure || "")}</td>
 
-<td>${data.motif}</td>
+<td>${escapeHtml(data.motif || "")}</td>
 
 <td>
 
 <span class="badge badge-primary">
 
-${data.statut || "En attente"}
+${escapeHtml(data.statut || "En attente")}
 
 </span>
 
@@ -705,6 +1336,230 @@ chargerRendezVous();
 }
 
 // ===============================
+// MODALES (PATIENT / RENDEZ-VOUS / ORDONNANCE / FACTURE)
+// ===============================
+
+let rdvEnCoursId = null;
+
+// Ouvre un modal
+function ouvrirModal(id){
+
+const modal = document.getElementById(id);
+
+if(modal) modal.classList.add("active");
+
+}
+
+// Ferme un modal
+function fermerModal(id){
+
+const modal = document.getElementById(id);
+
+if(modal) modal.classList.remove("active");
+
+}
+
+// Fermeture générique via la croix de chaque modal
+document.querySelectorAll(".closeModal").forEach((bouton)=>{
+
+bouton.addEventListener("click",(e)=>{
+
+const modal = e.target.closest(".modal");
+
+if(modal) modal.classList.remove("active");
+
+});
+
+});
+
+// --- Modal Nouveau Patient ---
+
+const boutonAjouterPatient = document.getElementById("addPatient");
+
+if(boutonAjouterPatient){
+
+boutonAjouterPatient.addEventListener("click",()=>{
+
+ouvrirModal("patientModal");
+
+});
+
+}
+
+// Le bouton du gabarit Patients (créé dynamiquement) utilise window.btnAjouterPatient
+window.btnAjouterPatient=function(){
+
+ouvrirModal("patientModal");
+
+};
+
+document.getElementById("patientForm").addEventListener("submit",async(e)=>{
+
+e.preventDefault();
+
+const nom = document.getElementById("nomPatient").value.trim();
+
+const telephone = document.getElementById("telephonePatient").value.trim();
+
+const email = document.getElementById("emailPatient").value.trim();
+
+const naissance = document.getElementById("dateNaissance").value;
+
+const adresse = document.getElementById("adressePatient").value.trim();
+
+
+await addDoc(collection(db,"patients"),{
+
+nom:nom,
+telephone:telephone,
+email:email,
+naissance:naissance,
+adresse:adresse,
+dateCreation:serverTimestamp()
+
+});
+
+fermerModal("patientModal");
+
+document.getElementById("patientForm").reset();
+
+chargerPatients();
+
+chargerStatistiques();
+
+});
+
+// --- Modal Ordonnance (pré-rempli depuis le dossier patient) ---
+
+window.nouvelleOrdonnance=function(patientId,patientNom){
+
+const modal=document.getElementById("ordonnanceModal");
+
+if(!modal) return;
+
+document.getElementById("ordPatientNom").value=patientNom||"";
+
+document.getElementById("ordDate").value=new Date().toISOString().split("T")[0];
+
+modal.classList.add("active");
+
+};
+
+// --- Modal Facture (pré-rempli depuis le dossier patient) ---
+
+window.nouvelleFacture=function(patientId,patientNom){
+
+const modal=document.getElementById("factureModal");
+
+if(!modal) return;
+
+document.getElementById("factPatientNom").value=patientNom||"";
+
+document.getElementById("factDate").value=new Date().toISOString().split("T")[0];
+
+modal.classList.add("active");
+
+};
+
+// --- Modal Rendez-vous (réponse admin) ---
+
+window.ouvrirRdvModal=function(id){
+
+rdvEnCoursId = id;
+
+const modal = document.getElementById("rdvModal");
+
+if(!modal) return;
+
+const inputDate = document.getElementById("nouvelleDate");
+
+const inputHeure = document.getElementById("nouvelleHeure");
+
+const inputMotif = document.getElementById("motifReport");
+
+if(inputDate) inputDate.value = "";
+
+if(inputHeure) inputHeure.value = "";
+
+if(inputMotif) inputMotif.value = "";
+
+modal.classList.add("active");
+
+};
+
+// Boutons de réponse du modal RDV
+
+const btnAccepter = document.getElementById("btnAccepter");
+
+if(btnAccepter) btnAccepter.addEventListener("click",async()=>{
+
+if(!rdvEnCoursId) return;
+
+await updateDoc(doc(db,"rendezvous",rdvEnCoursId),{statut:"Accepté"});
+
+fermerModal("rdvModal");
+
+rdvEnCoursId = null;
+
+chargerRendezVous();
+
+chargerStatistiques();
+
+});
+
+const btnReporter = document.getElementById("btnReporter");
+
+if(btnReporter) btnReporter.addEventListener("click",async()=>{
+
+if(!rdvEnCoursId) return;
+
+const motif = document.getElementById("motifReport").value.trim();
+
+await updateDoc(doc(db,"rendezvous",rdvEnCoursId),{
+
+statut:"Reporté",
+motif:motif
+
+});
+
+fermerModal("rdvModal");
+
+rdvEnCoursId = null;
+
+chargerRendezVous();
+
+});
+
+const btnRefuser = document.getElementById("btnRefuser");
+
+if(btnRefuser) btnRefuser.addEventListener("click",async()=>{
+
+if(!rdvEnCoursId) return;
+
+const motif = document.getElementById("motifReport").value.trim();
+
+await updateDoc(doc(db,"rendezvous",rdvEnCoursId),{
+
+statut:"Refusé",
+motif:motif
+
+});
+
+fermerModal("rdvModal");
+
+rdvEnCoursId = null;
+
+chargerRendezVous();
+
+});
+
+// --- Soumission des formulaires des modales fixes ---
+
+document.getElementById("ordonnanceForm").addEventListener("submit",enregistrerOrdonnance);
+
+document.getElementById("factureForm").addEventListener("submit",enregistrerFacture);
+
+// ===============================
 // TEMPS RÉEL
 // ===============================
 
@@ -742,6 +1597,8 @@ afficherOrdonnances();
 
 async function afficherOrdonnances(){
 
+activerMenu("ordonnanceBtn");
+
 pageContent.innerHTML=`
 
 <section class="dashboard-box">
@@ -750,44 +1607,19 @@ pageContent.innerHTML=`
 
 <h2>
 
-Nouvelle Ordonnance
+Ordonnances
 
 </h2>
 
-</div>
-
-<form id="ordonnanceForm">
-
-<input
-type="text"
-id="patientNom"
-placeholder="Nom du patient"
-required>
-
-<input
-type="text"
-id="medecin"
-placeholder="Nom du dentiste"
-required>
-
-<textarea
-id="diagnostic"
-placeholder="Diagnostic"
-rows="4"></textarea>
-
-<textarea
-id="prescription"
-placeholder="Prescription"
-rows="8"></textarea>
-
 <button
-class="btn-primary">
+class="btn-primary"
+id="btnNouvelleOrdonnance">
 
-Enregistrer l'ordonnance
++ Nouvelle Ordonnance
 
 </button>
 
-</form>
+</div>
 
 <hr><br>
 
@@ -823,9 +1655,11 @@ Enregistrer l'ordonnance
 
 chargerOrdonnances();
 
-const form=document.getElementById("ordonnanceForm");
+document.getElementById("btnNouvelleOrdonnance").addEventListener("click",()=>{
 
-form.addEventListener("submit",enregistrerOrdonnance);
+ouvrirModal("ordonnanceModal");
+
+});
 
 }
 
@@ -837,21 +1671,32 @@ async function enregistrerOrdonnance(e){
 
 e.preventDefault();
 
+const patient = document.getElementById("ordPatientNom").value.trim();
+
+const medecin = document.getElementById("ordMedecin").value.trim();
+
+const diagnostic = document.getElementById("ordDiagnostic").value.trim();
+
+const prescription = document.getElementById("ordTraitements").value.trim();
+
+const date = document.getElementById("ordDate").value;
+
+
 await addDoc(
 
 collection(db,"ordonnances"),
 
 {
 
-patient:patientNom.value,
+patient:patient,
 
-medecin:medecin.value,
+medecin:medecin,
 
-diagnostic:diagnostic.value,
+diagnostic:diagnostic,
 
-prescription:prescription.value,
+prescription:prescription,
 
-date:new Date().toLocaleDateString(),
+date:date || new Date().toLocaleDateString(),
 
 dateCreation:serverTimestamp()
 
@@ -859,7 +1704,7 @@ dateCreation:serverTimestamp()
 
 );
 
-alert("Ordonnance enregistrée.");
+fermerModal("ordonnanceModal");
 
 document.getElementById("ordonnanceForm").reset();
 
@@ -939,7 +1784,83 @@ Supprimer
 
 window.imprimerOrdonnance=async(id)=>{
 
-alert("La génération PDF sera ajoutée dans le module PDF.");
+const docu=await getDoc(doc(db,"ordonnances",id));
+
+if(!docu.exists()){
+
+alert("Ordonnance introuvable.");
+
+return;
+
+}
+
+const o=docu.data();
+
+const win=window.open("","_blank");
+
+if(!win){
+
+alert("Veuillez autoriser les fenêtres pop-up pour imprimer.");
+
+return;
+
+}
+
+win.document.write(`
+
+<html>
+
+<head>
+
+<title>Ordonnance</title>
+
+<style>
+
+body{font-family:Arial,Helvetica,sans-serif;margin:40px;color:#1a1a1a;}
+
+h1{font-size:22px;}
+
+table{width:100%;border-collapse:collapse;margin-top:20px;}
+
+td{padding:8px 4px;border-bottom:1px solid #ddd;}
+
+.logo{font-size:14px;color:#0a66c2;}
+
+</style>
+
+</head>
+
+<body>
+
+<h1>NET SOURIRE — Ordonnance Médicale</h1>
+
+<table>
+
+<tr><td><b>Patient :</b></td><td>${escapeHtml(o.patient||"")}</td></tr>
+
+<tr><td><b>Médecin :</b></td><td>${escapeHtml(o.medecin||"")}</td></tr>
+
+<tr><td><b>Date :</b></td><td>${escapeHtml(o.date||"")}</td></tr>
+
+<tr><td><b>Diagnostic :</b></td><td>${escapeHtml(o.diagnostic||"")}</td></tr>
+
+</table>
+
+<h3>Prescription</h3>
+
+<p>${escapeHtml(o.prescription||"")}</p>
+
+<p style="margin-top:60px;">_______________________<br>Le médecin</p>
+
+<script>window.onload=function(){window.print();}<\/script>
+
+</body>
+
+</html>
+
+`);
+
+win.document.close();
 
 }
 
@@ -997,6 +1918,8 @@ afficherFactures();
 
 async function afficherFactures(){
 
+activerMenu("factureBtn");
+
 pageContent.innerHTML=`
 
 <section class="dashboard-box">
@@ -1009,47 +1932,15 @@ Gestion des Factures
 
 </h2>
 
-</div>
+<button
+class="btn-primary"
+id="btnNouvelleFacture">
 
-<form id="factureForm">
-
-<input
-type="text"
-id="clientNom"
-placeholder="Nom du patient"
-required>
-
-<input
-type="number"
-id="montant"
-placeholder="Montant (FCFA)"
-required>
-
-<input
-type="text"
-id="service"
-placeholder="Service effectué"
-required>
-
-<select id="modePaiement">
-
-<option>Espèces</option>
-
-<option>Mobile Money</option>
-
-<option>Carte Bancaire</option>
-
-<option>Virement</option>
-
-</select>
-
-<button class="btn-primary">
-
-Créer la facture
++ Nouvelle Facture
 
 </button>
 
-</form>
+</div>
 
 <hr><br>
 
@@ -1089,9 +1980,11 @@ Créer la facture
 
 chargerFactures();
 
-document
-.getElementById("factureForm")
-.addEventListener("submit",enregistrerFacture);
+document.getElementById("btnNouvelleFacture").addEventListener("click",()=>{
+
+ouvrirModal("factureModal");
+
+});
 
 }
 
@@ -1103,21 +1996,30 @@ async function enregistrerFacture(e){
 
 e.preventDefault();
 
+const patient = document.getElementById("factPatientNom").value.trim();
+
+const montant = Number(document.getElementById("factMontant").value);
+
+const service = document.getElementById("factDescription").value.trim();
+
+const date = document.getElementById("factDate").value;
+
+
 await addDoc(
 
 collection(db,"factures"),
 
 {
 
-patient:clientNom.value,
+patient:patient,
 
-service:service.value,
+service:service,
 
-montant:Number(montant.value),
+montant:montant,
 
-paiement:modePaiement.value,
+paiement:"Espèces",
 
-date:new Date().toLocaleDateString(),
+date:date || new Date().toLocaleDateString(),
 
 dateCreation:serverTimestamp()
 
@@ -1125,7 +2027,7 @@ dateCreation:serverTimestamp()
 
 );
 
-alert("Facture créée.");
+fermerModal("factureModal");
 
 document.getElementById("factureForm").reset();
 
@@ -1211,7 +2113,81 @@ calculerRecettes();
 
 window.imprimerFacture=async(id)=>{
 
-alert("Le module PDF sera ajouté ensuite.");
+const docu=await getDoc(doc(db,"factures",id));
+
+if(!docu.exists()){
+
+alert("Facture introuvable.");
+
+return;
+
+}
+
+const f=docu.data();
+
+const win=window.open("","_blank");
+
+if(!win){
+
+alert("Veuillez autoriser les fenêtres pop-up pour imprimer.");
+
+return;
+
+}
+
+win.document.write(`
+
+<html>
+
+<head>
+
+<title>Facture</title>
+
+<style>
+
+body{font-family:Arial,Helvetica,sans-serif;margin:40px;color:#1a1a1a;}
+
+h1{font-size:22px;}
+
+table{width:100%;border-collapse:collapse;margin-top:20px;}
+
+td{padding:8px 4px;border-bottom:1px solid #ddd;}
+
+.montant{font-size:18px;font-weight:bold;color:#0a66c2;}
+
+</style>
+
+</head>
+
+<body>
+
+<h1>NET SOURIRE — Facture</h1>
+
+<table>
+
+<tr><td><b>Patient :</b></td><td>${escapeHtml(f.patient||"")}</td></tr>
+
+<tr><td><b>Date :</b></td><td>${escapeHtml(f.date||"")}</td></tr>
+
+<tr><td><b>Service :</b></td><td>${escapeHtml(f.service||"")}</td></tr>
+
+<tr><td><b>Mode de paiement :</b></td><td>${escapeHtml(f.modePaiement||"")}</td></tr>
+
+<tr><td><b>Montant :</b></td><td class="montant">${Number(f.montant||0).toLocaleString()} FCFA</td></tr>
+
+</table>
+
+<p style="margin-top:60px;">Merci de votre paiement.</p>
+
+<script>window.onload=function(){window.print();}<\/script>
+
+</body>
+
+</html>
+
+`);
+
+win.document.close();
 
 }
 
@@ -1268,6 +2244,8 @@ afficherPublications();
 // ===============================
 
 async function afficherPublications(){
+
+activerMenu("publicationBtn");
 
 pageContent.innerHTML=`
 
@@ -1358,15 +2336,45 @@ async function enregistrerPublication(e){
 
 e.preventDefault();
 
+const titre=document.getElementById("titrePublication").value.trim();
+
+const description=document.getElementById("descriptionPublication").value.trim();
+
+const fichier=document.getElementById("imagePublication").files[0];
+
+let url="";
+
+let type="image";
+
+
+if(fichier){
+
+const extension=fichier.name.split(".").pop().toLowerCase();
+
+type=(["mp4","webm","mov"].includes(extension))?"video":"image";
+
+const reference=ref(storage,`publications/${Date.now()}-${fichier.name}`);
+
+await uploadBytes(reference,fichier);
+
+url=await getDownloadURL(reference);
+
+}
+
+
 await addDoc(
 
 collection(db,"publications"),
 
 {
 
-titre:titrePublication.value,
+titre:titre,
 
-description:descriptionPublication.value,
+description:description,
+
+url:url,
+
+type:type,
 
 date:new Date().toLocaleDateString(),
 
@@ -1375,8 +2383,6 @@ dateCreation:serverTimestamp()
 }
 
 );
-
-alert("Publication enregistrée.");
 
 document.getElementById("publicationForm").reset();
 
@@ -1514,12 +2520,6 @@ chargerPublications();
 // PARAMÈTRES - DÉCONNEXION - INITIALISATION
 // ==========================================
 
-import { auth } from "./firebase.js";
-
-import {
-signOut
-} from "https://www.gstatic.com/firebasejs/12.0.0/firebase-auth.js";
-
 // ===============================
 // MENU PARAMÈTRES
 // ===============================
@@ -1534,6 +2534,8 @@ afficherParametres();
 });
 
 function afficherParametres(){
+
+activerMenu("parametreBtn");
 
 pageContent.innerHTML=`
 
@@ -1551,31 +2553,74 @@ Paramètres du Cabinet
 
 <form id="cabinetForm">
 
+<div class="form-group">
+
+<label>Nom du cabinet</label>
+
 <input
 type="text"
+id="paramNomCabinet"
 placeholder="Nom du cabinet">
 
-<input
-type="text"
-placeholder="Nom du dentiste">
+</div>
+
+<div class="form-group">
+
+<label>Nom du dentiste</label>
 
 <input
 type="text"
+id="paramNomDentiste"
+placeholder="Nom du dentiste">
+
+</div>
+
+<div class="form-group">
+
+<label>Téléphone</label>
+
+<input
+type="text"
+id="paramTelephone"
 placeholder="Téléphone">
+
+</div>
+
+<div class="form-group">
+
+<label>Adresse e-mail</label>
 
 <input
 type="email"
+id="paramEmail"
 placeholder="Adresse e-mail">
+
+</div>
+
+<div class="form-group">
+
+<label>Adresse</label>
 
 <input
 type="text"
+id="paramAdresse"
 placeholder="Adresse">
 
+</div>
+
+<div class="form-group">
+
+<label>Description du cabinet</label>
+
 <textarea
+id="paramDescription"
 rows="5"
 placeholder="Description du cabinet"></textarea>
 
+</div>
+
 <button
+type="submit"
 class="btn-primary">
 
 Enregistrer
@@ -1584,15 +2629,128 @@ Enregistrer
 
 </form>
 
+<div id="paramMessage"></div>
+
 </section>
 
 `;
+
+// Câbler le formulaire (créé dynamiquement juste avant)
+
+const cabinetForm=document.getElementById("cabinetForm");
+
+if(cabinetForm){
+
+cabinetForm.addEventListener("submit",sauvegarderParametres);
+
+}
+
+// Remplir le formulaire avec les valeurs existantes
+
+chargerParametres();
+
+}
+
+// ===============================
+
+// PARAMÈTRES DU CABINET
+
+// ===============================
+
+async function chargerParametres(){
+
+try{
+
+const snap=await getDoc(doc(db,"parametres","cabinet"));
+
+if(snap.exists()){
+
+const d=snap.data();
+
+if(d.nomCabinet) document.getElementById("paramNomCabinet").value=d.nomCabinet;
+
+if(d.nomDentiste) document.getElementById("paramNomDentiste").value=d.nomDentiste;
+
+if(d.telephone) document.getElementById("paramTelephone").value=d.telephone;
+
+if(d.email) document.getElementById("paramEmail").value=d.email;
+
+if(d.adresse) document.getElementById("paramAdresse").value=d.adresse;
+
+if(d.description) document.getElementById("paramDescription").value=d.description;
+
+}
+
+}catch(error){
+
+console.error(error);
+
+}
+
+}
+
+async function sauvegarderParametres(e){
+
+e.preventDefault();
+
+try{
+
+await setDoc(doc(db,"parametres","cabinet"),{
+
+nomCabinet:document.getElementById("paramNomCabinet").value.trim(),
+
+nomDentiste:document.getElementById("paramNomDentiste").value.trim(),
+
+telephone:document.getElementById("paramTelephone").value.trim(),
+
+email:document.getElementById("paramEmail").value.trim(),
+
+adresse:document.getElementById("paramAdresse").value.trim(),
+
+description:document.getElementById("paramDescription").value.trim(),
+
+dateModification:serverTimestamp()
+
+});
+
+const msg=document.getElementById("paramMessage");
+
+if(msg){
+
+msg.style.color="green";
+
+msg.textContent="✅ Paramètres du cabinet enregistrés.";
+
+}
+
+}catch(error){
+
+console.error(error);
+
+const msg=document.getElementById("paramMessage");
+
+if(msg){
+
+msg.style.color="red";
+
+msg.textContent="❌ Erreur : "+error.message;
+
+}
+
+}
 
 }
 
 // ===============================
 // DÉCONNEXION
 // ===============================
+
+// Retour à l'accueil du dashboard (recharge la page)
+window.afficherDashboard = function(){
+
+location.reload();
+
+};
 
 const logout=document.getElementById("logoutBtn");
 
@@ -1690,7 +2848,7 @@ Aucun traitement enregistré.
 
 <button
 class="btn btn-primary"
-onclick="nouvelleOrdonnance('${id}')">
+onclick="nouvelleOrdonnance('${id}',${JSON.stringify(p.nom||"")})">
 
 Nouvelle Ordonnance
 
@@ -1698,7 +2856,7 @@ Nouvelle Ordonnance
 
 <button
 class="btn btn-success"
-onclick="nouvelleFacture('${id}')">
+onclick="nouvelleFacture('${id}',${JSON.stringify(p.nom||"")})">
 
 Nouvelle Facture
 
@@ -1804,18 +2962,6 @@ historique.innerHTML += `
 // RADIOGRAPHIES ET PHOTOS
 // ==========================================
 
-import { storage } from "./firebase.js";
-
-import {
-
-ref,
-
-uploadBytes,
-
-getDownloadURL
-
-} from "https://www.gstatic.com/firebasejs/12.0.0/firebase-storage.js";
-
 window.ajouterRadiographie = async function(patientId){
 
 const input = document.createElement("input");
@@ -1900,6 +3046,8 @@ style="width:180px;height:180px;object-fit:cover;border-radius:12px;margin:10px;
 
 window.afficherCalendrier = async function(){
 
+activerMenu("calendrierRdvBtn");
+
 pageContent.innerHTML = `
 
 <section class="dashboard-box">
@@ -1953,13 +3101,13 @@ tbody.innerHTML += `
 
 <tr>
 
-<td>${data.nom}</td>
+<td>${escapeHtml(data.patientNom || data.nom || "")}</td>
 
-<td>${data.date}</td>
+<td>${escapeHtml(data.date || "")}</td>
 
-<td>${data.heure}</td>
+<td>${escapeHtml(data.heure || "")}</td>
 
-<td>${data.statut || "En attente"}</td>
+<td>${escapeHtml(data.statut || "En attente")}</td>
 
 </tr>
 
@@ -1976,6 +3124,345 @@ e.preventDefault();
 afficherCalendrier();
 
 });
+
+// Bouton "Nouveau Rendez-vous" de l'accueil
+const nouveauRdvBtn=document.getElementById("nouveauRdvBtn");
+
+if(nouveauRdvBtn){
+
+nouveauRdvBtn.addEventListener("click",(e)=>{
+
+e.preventDefault();
+
+nouveauRendezVous();
+
+});
+
+}
+
+// Bouton "Calendrier" du menu (sidebar)
+const calendrierRdvBtn=document.getElementById("calendrierRdvBtn");
+
+if(calendrierRdvBtn){
+
+calendrierRdvBtn.addEventListener("click",(e)=>{
+
+e.preventDefault();
+
+afficherCalendrier();
+
+});
+
+}
+
+// Bell de notification
+const notificationBtn=document.getElementById("notificationBtn");
+
+if(notificationBtn){
+
+notificationBtn.addEventListener("click",(e)=>{
+
+e.preventDefault();
+
+afficherNotifications();
+
+});
+
+}
+
+// ===============================
+// SECTION NOTIFICATIONS
+// ===============================
+
+async function afficherNotifications(){
+
+pageContent.innerHTML=`
+
+<section class="dashboard-box">
+
+<div class="box-header">
+
+<h2>
+
+Notifications
+
+</h2>
+
+<button
+class="btn btn-warning"
+onclick="afficherDashboard()">
+
+↩ Retour au tableau de bord
+
+</button>
+
+</div>
+
+<div class="notifications-list">
+
+<h3>Rendez-vous en attente</h3>
+
+<ul id="notificationsList">
+
+<li>Chargement...</li>
+
+</ul>
+
+</div>
+
+</section>
+
+`;
+
+chargerNotificationsList();
+
+}
+
+// ===============================
+// NOUVEAU RENDEZ-VOUS
+// ===============================
+
+function nouveauRendezVous(){
+
+pageContent.innerHTML=`
+
+<section class="dashboard-box">
+
+<div class="box-header">
+
+<h2>
+
+Nouveau Rendez-vous
+
+</h2>
+
+<button
+class="btn btn-warning"
+onclick="afficherRendezVous()">
+
+↩ Retour
+
+</button>
+
+</div>
+
+<form id="nouveauRdvForm">
+
+<div class="form-grid">
+
+<div class="form-group">
+
+<label>Nom du patient</label>
+
+<input
+type="text"
+id="rdvNom"
+placeholder="Nom du patient"
+required>
+
+</div>
+
+<div class="form-group">
+
+<label>Téléphone</label>
+
+<input
+type="tel"
+id="rdvTelephone"
+placeholder="Téléphone"
+required>
+
+</div>
+
+<div class="form-group">
+
+<label>Email</label>
+
+<input
+type="email"
+id="rdvEmail"
+placeholder="Adresse e-mail">
+
+</div>
+
+<div class="form-group">
+
+<label>Date</label>
+
+<input
+type="date"
+id="rdvDate"
+required>
+
+</div>
+
+<div class="form-group">
+
+<label>Heure</label>
+
+<input
+type="time"
+id="rdvHeure"
+required>
+
+</div>
+
+<div class="form-group">
+
+<label>Type de consultation</label>
+
+<select id="rdvType">
+
+<option>Consultation</option>
+
+<option>Détartrage</option>
+
+<option>Soin dentaire</option>
+
+<option>Extraction</option>
+
+<option>Implant</option>
+
+<option>Orthodontie</option>
+
+<option>Contrôle</option>
+
+<option>Urgence</option>
+
+</select>
+
+</div>
+
+<div class="form-group full-width">
+
+<label>Motif</label>
+
+<textarea
+id="rdvMotif"
+rows="3"
+placeholder="Motif du rendez-vous"></textarea>
+
+</div>
+
+</div>
+
+<div class="actions">
+
+<button
+type="submit"
+class="btn-primary">
+
+Enregistrer
+
+</button>
+
+</div>
+
+</form>
+
+</section>
+
+`;
+
+document
+.getElementById("nouveauRdvForm")
+.addEventListener("submit",async(e)=>{
+
+e.preventDefault();
+
+
+const nom=document.getElementById("rdvNom").value.trim();
+
+const telephone=document.getElementById("rdvTelephone").value.trim();
+
+const email=document.getElementById("rdvEmail").value.trim();
+
+const date=document.getElementById("rdvDate").value;
+
+const heure=document.getElementById("rdvHeure").value;
+
+const type=document.getElementById("rdvType").value;
+
+const motif=document.getElementById("rdvMotif").value.trim();
+
+
+// Lien au patient existant si possible
+
+let patientId="";
+
+if(nom){
+
+try{
+
+const qPatients=query(
+
+collection(db,"patients"),
+
+where("nom","==",nom)
+
+);
+
+const snapPatients=await getDocs(qPatients);
+
+if(!snapPatients.empty){
+
+patientId=snapPatients.docs[0].id;
+
+}
+
+}catch(error){
+
+console.error(error);
+
+}
+
+}
+
+
+await addDoc(
+
+collection(db,"rendezvous"),
+
+{
+
+patientId:patientId,
+
+patientNom:nom,
+
+patientEmail:email,
+
+telephone:telephone,
+
+date:date,
+
+heure:heure,
+
+typeConsultation:type,
+
+motif:motif,
+
+statut:"En attente",
+
+dateCreation:serverTimestamp()
+
+}
+
+);
+
+
+alert("✅ Rendez-vous enregistré.");
+
+afficherRendezVous();
+
+chargerRendezVousDashboard();
+
+chargerSectionsAccueil();
+
+chargerStatistiques();
+
+});
+
+}
 // ==========================================
 // DASHBOARD.JS - PARTIE 13
 // GESTION DES PAIEMENTS & CAISSE
@@ -1996,6 +3483,8 @@ afficherCaisse();
 // ===============================
 
 async function afficherCaisse(){
+
+activerMenu("caisseBtn");
 
 pageContent.innerHTML=`
 
@@ -2095,7 +3584,7 @@ let total=0;
 
 let aujourdhui=0;
 
-const dateJour=new Date().toLocaleDateString();
+const maintenant=new Date();
 
 snapshot.forEach((docu)=>{
 
@@ -2105,7 +3594,9 @@ const montant=Number(data.montant||0);
 
 total+=montant;
 
-if(data.date===dateJour){
+const dateDoc=getDateDocument(data);
+
+if(dateDoc && memeJour(dateDoc,maintenant)){
 
 aujourdhui+=montant;
 
@@ -2115,15 +3606,15 @@ tbody.innerHTML+=`
 
 <tr>
 
-<td>${data.patient}</td>
+<td>${escapeHtml(data.patient)}</td>
 
-<td>${data.service}</td>
+<td>${escapeHtml(data.service)}</td>
 
 <td>${montant.toLocaleString()} FCFA</td>
 
-<td>${data.paiement}</td>
+<td>${escapeHtml(data.paiement)}</td>
 
-<td>${data.date}</td>
+<td>${escapeHtml(data.date)}</td>
 
 </tr>
 
@@ -2182,6 +3673,8 @@ afficherRapports();
 // ===============================
 
 async function afficherRapports(){
+
+activerMenu("rapportBtn");
 
 pageContent.innerHTML=`
 
@@ -2274,12 +3767,16 @@ const montant=Number(data.montant||0);
 
 total+=montant;
 
-// Pour l'instant, on ajoute tout.
-// Plus tard, on filtrera par date réelle.
+// Filtre par date réelle du document (dateCreation ou date)
+const dateDoc=getDateDocument(data);
 
-jour+=montant;
-semaine+=montant;
-mois+=montant;
+if(!dateDoc) return;
+
+if(memeJour(dateDoc,maintenant)) jour+=montant;
+
+if(memeSemaine(dateDoc,maintenant)) semaine+=montant;
+
+if(memeMois(dateDoc,maintenant)) mois+=montant;
 
 });
 

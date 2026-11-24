@@ -9,7 +9,8 @@ import { auth, db } from "./firebase.js";
 import {
 signInWithEmailAndPassword,
 sendPasswordResetEmail,
-onAuthStateChanged
+onAuthStateChanged,
+signOut
 } from "https://www.gstatic.com/firebasejs/12.0.0/firebase-auth.js";
 
 import {
@@ -211,6 +212,52 @@ alert("Un e-mail de réinitialisation a été envoyé.");
 alert(error.message);
 
 }
+
+});
+
+}
+
+// ==========================================
+// DÉCONNEXION PATIENT
+// ==========================================
+
+// Fonction globale de déconnexion (utilisée par le menu patient)
+window.deconnexionPatient = async function(){
+
+try{
+
+await signOut(auth);
+
+localStorage.removeItem("patientUID");
+
+localStorage.removeItem("patientNom");
+
+localStorage.removeItem("patientEmail");
+
+localStorage.removeItem("patientTelephone");
+
+window.location.href = "patient-login.html";
+
+}catch(error){
+
+console.error(error);
+
+window.location.href = "patient-login.html";
+
+}
+
+};
+
+// Déconnexion via le bouton logoutBtn des pages patient
+const logoutBtn = document.getElementById("logoutBtn");
+
+if(logoutBtn){
+
+logoutBtn.addEventListener("click", async (e) => {
+
+e.preventDefault();
+
+await window.deconnexionPatient();
 
 });
 

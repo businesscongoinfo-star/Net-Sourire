@@ -19,6 +19,23 @@ from "https://www.gstatic.com/firebasejs/12.0.0/firebase-firestore.js";
 
 const pageContent=document.getElementById("pageContent");
 
+// Échappement anti-XSS
+function escapeHtml(valeur){
+
+return String(valeur ?? "")
+
+.replace(/&/g,"&amp;")
+
+.replace(/</g,"&lt;")
+
+.replace(/>/g,"&gt;")
+
+.replace(/"/g,"&quot;")
+
+.replace(/'/g,"&#39;");
+
+}
+
 // ==========================================
 // MENU ODONTOGRAMME
 // ==========================================
@@ -43,6 +60,12 @@ ouvrirOdontogramme();
 
 export function ouvrirOdontogramme(patientId=""){
 
+if(window.activerMenu){
+
+window.activerMenu("odontogrammeBtn");
+
+}
+
 let dents="";
 
 for(let i=1;i<=32;i++){
@@ -53,7 +76,7 @@ dents+=`
 
 class="dent"
 
-onclick="selectionnerDent(${i},'${patientId}')">
+onclick="selectionnerDent(${i},'${escapeHtml(patientId)}')">
 
 ${i}
 
@@ -105,33 +128,7 @@ Cliquez sur une dent pour afficher les informations.
 // SÉLECTION D'UNE DENT
 // ==========================================
 
-window.selectionnerDent=async function(numero,patientId){
 
-const detail=document.getElementById("detailDent");
-
-detail.innerHTML=`
-
-<h3>Dent N° ${numero}</h3>
-
-<br>
-
-<button
-
-class="btn btn-success"
-
-onclick="ajouterSoin('${patientId}',${numero})">
-
-➕ Ajouter un soin
-
-</button>
-
-<div id="listeSoinsDent"></div>
-
-`;
-
-chargerSoinsDent(patientId,numero);
-
-}
 
 // ==========================================
 // FIN PARTIE 1
@@ -231,11 +228,11 @@ zone.innerHTML+=`
 
 <div>
 
-<h4>${soin.type}</h4>
+<h4>${escapeHtml(soin.type)}</h4>
 
-<p>${soin.observation || ""}</p>
+<p>${escapeHtml(soin.observation || "")}</p>
 
-<small>${soin.date}</small>
+<small>${escapeHtml(soin.date)}</small>
 
 </div>
 
@@ -388,49 +385,7 @@ d.couleur
 // DÉTAIL D'UNE DENT
 // ===============================
 
-window.selectionnerDent = async function(numero,patientId){
 
-const detail=document.getElementById("detailDent");
-
-detail.innerHTML=`
-
-<h3>🦷 Dent N° ${numero}</h3>
-
-<br>
-
-<button
-
-class="btn btn-success"
-
-onclick="ajouterSoin('${patientId}',${numero})">
-
-➕ Ajouter un soin
-
-</button>
-
-<button
-
-class="btn btn-warning"
-
-onclick="changerEtatDent('${patientId}',${numero})">
-
-🎨 Modifier l'état
-
-</button>
-
-<hr>
-
-<div id="listeSoinsDent">
-
-<div class="loader"></div>
-
-</div>
-
-`;
-
-chargerSoinsDent(patientId,numero);
-
-}
 
 // ===============================
 // INITIALISATION
@@ -556,7 +511,7 @@ zone.innerHTML+=`
 
 <img
 
-src="${d.photo}"
+src="${escapeHtml(d.photo)}"
 
 style="width:150px;height:150px;object-fit:cover;border-radius:12px;margin:8px;">
 
@@ -640,11 +595,11 @@ zone.innerHTML+=`
 
 <div>
 
-<h4>${soin.type}</h4>
+<h4>${escapeHtml(soin.type)}</h4>
 
-<p>${soin.observation}</p>
+<p>${escapeHtml(soin.observation)}</p>
 
-<small>${soin.date}</small>
+<small>${escapeHtml(soin.date)}</small>
 
 </div>
 

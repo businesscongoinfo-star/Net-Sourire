@@ -8,6 +8,7 @@
   <link rel="icon" href="images/logo.png">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css">
   <link rel="stylesheet" href="patient.css">
+<link rel="stylesheet" href="patient-dashboard.css">
 </head>
 
 <body>
@@ -44,7 +45,7 @@
   <script type="module">
     import { auth, db } from "./firebase.js";
     import { onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/12.0.0/firebase-auth.js";
-    import { collection, query, where, getDocs } from "https://www.gstatic.com/firebasejs/12.0.0/firebase-firestore.js";
+    import { collection, query, where, getDocs, doc, getDoc } from "https://www.gstatic.com/firebasejs/12.0.0/firebase-firestore.js";
 
     const listEl = document.getElementById("facturesList");
     const logoutBtn = document.getElementById("logoutBtn");
@@ -58,6 +59,13 @@
       });
     }
 
+    const escapeHtml = (v) => String(v ?? "")
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&#39;");
+
     onAuthStateChanged(auth, async (user) => {
       if (!user) {
         window.location.href = "patient-login.html";
@@ -65,24 +73,48 @@
       }
 
       try {
-        const q = query(collection(db, "factures"), where("patientId", "==", user.uid));
-        const snap = await getDocs(q);
+        // Nom du patient pour correspondance (documents admin sans patientId)
+        const pDoc = await getDoc(doc(db, "patients", user.uid));
+        const nomPatient = pDoc.exists() ? (pDoc.data().nom || "") : "";
 
-        if (snap.empty) {
+        let docs = [];
+        try {
+          const q = query(collection(db, "factures"), where("patientId", "==", user.uid));
+          const snap = await getDocs(q);
+          docs = snap.docs.map((d) => ({ id: d.id, data: d.data() }));
+        } catch (err) {
+          console.error(err);
+        }
+
+        if (nomPatient) {
+          const tout = await getDocs(collection(db, "factures"));
+          tout.docs.forEach((d) => {
+            const data = d.data();
+            if (data.patientId !== user.uid) {
+              const nomDoc = data.patientNom || data.patient;
+              if (typeof nomDoc === "string" &&
+                  nomDoc.trim().toLowerCase() === nomPatient.trim().toLowerCase()) {
+                docs.push({ id: d.id, data });
+              }
+            }
+          });
+        }
+
+        if (docs.length === 0) {
           listEl.innerHTML = "<p>Aucune facture disponible pour le moment.</p>";
           return;
         }
 
         listEl.innerHTML = "";
-        snap.forEach((docSnap) => {
-          const data = docSnap.data();
+        docs.forEach((item) => {
+          const data = item.data;
           const card = document.createElement("div");
           card.className = "patient-card";
           card.innerHTML = `
-            <h3>Facture #${data.numero || docSnap.id.slice(0, 6)}</h3>
-            <p><strong>Date :</strong> ${data.date || "N/A"}</p>
-            <p><strong>Montant :</strong> ${data.montant || data.total || 0} FCFA</p>
-            <p><strong>Statut :</strong> ${data.statut || "En attente"}</p>
+            <h3>Facture #${escapeHtml(data.numero || item.id.slice(0, 6))}</h3>
+            <p><strong>Date :</strong> ${escapeHtml(data.date || "N/A")}</p>
+            <p><strong>Montant :</strong> ${escapeHtml(data.montant || data.total || 0)} FCFA</p>
+            <p><strong>Statut :</strong> ${escapeHtml(data.statut || "En attente")}</p>
           `;
           listEl.appendChild(card);
         });

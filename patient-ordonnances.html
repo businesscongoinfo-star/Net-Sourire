@@ -8,6 +8,7 @@
   <link rel="icon" href="images/logo.png">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css">
   <link rel="stylesheet" href="patient.css">
+<link rel="stylesheet" href="patient-dashboard.css">
 </head>
 
 <body>
@@ -44,7 +45,7 @@
   <script type="module">
     import { auth, db } from "./firebase.js";
     import { onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/12.0.0/firebase-auth.js";
-    import { collection, query, where, getDocs } from "https://www.gstatic.com/firebasejs/12.0.0/firebase-firestore.js";
+    import { collection, query, where, getDocs, doc, getDoc } from "https://www.gstatic.com/firebasejs/12.0.0/firebase-firestore.js";
 
     const listEl = document.getElementById("ordonnancesList");
     const logoutBtn = document.getElementById("logoutBtn");
@@ -58,6 +59,13 @@
       });
     }
 
+    const escapeHtml = (v) => String(v ?? "")
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&#39;");
+
     onAuthStateChanged(auth, async (user) => {
       if (!user) {
         window.location.href = "patient-login.html";
@@ -65,23 +73,47 @@
       }
 
       try {
-        const q = query(collection(db, "ordonnances"), where("patientId", "==", user.uid));
-        const snap = await getDocs(q);
+        // Nom du patient pour correspondance (documents admin sans patientId)
+        const pDoc = await getDoc(doc(db, "patients", user.uid));
+        const nomPatient = pDoc.exists() ? (pDoc.data().nom || "") : "";
 
-        if (snap.empty) {
+        let docs = [];
+        try {
+          const q = query(collection(db, "ordonnances"), where("patientId", "==", user.uid));
+          const snap = await getDocs(q);
+          docs = snap.docs.map((d) => ({ id: d.id, data: d.data() }));
+        } catch (err) {
+          console.error(err);
+        }
+
+        if (nomPatient) {
+          const tout = await getDocs(collection(db, "ordonnances"));
+          tout.docs.forEach((d) => {
+            const data = d.data();
+            if (data.patientId !== user.uid) {
+              const nomDoc = data.patientNom || data.patient;
+              if (typeof nomDoc === "string" &&
+                  nomDoc.trim().toLowerCase() === nomPatient.trim().toLowerCase()) {
+                docs.push({ id: d.id, data });
+              }
+            }
+          });
+        }
+
+        if (docs.length === 0) {
           listEl.innerHTML = "<p>Aucune ordonnance disponible pour le moment.</p>";
           return;
         }
 
         listEl.innerHTML = "";
-        snap.forEach((docSnap) => {
-          const data = docSnap.data();
+        docs.forEach((item) => {
+          const data = item.data;
           const card = document.createElement("div");
           card.className = "patient-card";
           card.innerHTML = `
-            <h3>Ordonnance du ${data.date || "N/A"}</h3>
-            <p><strong>Médecin :</strong> ${data.medecin || "Cabinet Net Sourire"}</p>
-            <p><strong>Prescription :</strong> ${data.medicaments || data.contenu || "Voir détails au cabinet"}</p>
+            <h3>Ordonnance du ${escapeHtml(data.date || "N/A")}</h3>
+            <p><strong>Médecin :</strong> ${escapeHtml(data.medecin || "Cabinet Net Sourire")}</p>
+            <p><strong>Prescription :</strong> ${escapeHtml(data.medicaments || data.contenu || data.prescription || "Voir détails au cabinet")}</p>
           `;
           listEl.appendChild(card);
         });

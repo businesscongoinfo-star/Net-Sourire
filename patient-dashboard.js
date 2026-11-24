@@ -21,6 +21,39 @@ limit,
 getDocs
 } from "https://www.gstatic.com/firebasejs/12.0.0/firebase-firestore.js";
 
+// Échappement anti-XSS
+function escapeHtml(valeur){
+
+return String(valeur ?? "")
+
+.replace(/&/g,"&amp;")
+
+.replace(/</g,"&lt;")
+
+.replace(/>/g,"&gt;")
+
+.replace(/"/g,"&quot;")
+
+.replace(/'/g,"&#39;");
+
+}
+
+// Vérifie si un document rendez-vous/ordonnance/facture appartient au patient
+// (par patientId, ou par correspondance du nom du patient)
+function documentEstPourPatient(data,uid,nomPatient){
+
+if(data.patientId && data.patientId===uid) return true;
+
+if(!nomPatient) return false;
+
+const nomDoc=data.patientNom||data.patient;
+
+return typeof nomDoc==="string" &&
+
+nomDoc.trim().toLowerCase()===nomPatient.trim().toLowerCase();
+
+}
+
 // ==========================================
 // VERIFICATION CONNEXION
 // ==========================================
@@ -84,6 +117,10 @@ patient.nom || "Patient";
 
 async function chargerStatistiques(uid){
 
+// Nom du patient pour correspondance
+const patientSnap=await getDoc(doc(db,"patients",uid));
+const nomPatient=patientSnap.exists()?patientSnap.data().nom:"";
+
 // Rendez-vous
 
 const rdvQuery=query(
@@ -96,9 +133,25 @@ where("patientId","==",uid)
 
 const rdvSnap=await getDocs(rdvQuery);
 
+let totalRdv=rdvSnap.size;
+
+// Compat : documents sans patientId mais liés au nom
+
+if(nomPatient){
+
+const rdvTout=await getDocs(collection(db,"rendezvous"));
+
+rdvTout.forEach(d=>{
+
+if(!d.data().patientId && documentEstPourPatient(d.data(),uid,nomPatient)) totalRdv++;
+
+});
+
+}
+
 document.getElementById("totalRendezvous").textContent=
 
-rdvSnap.size;
+totalRdv;
 
 // Ordonnances
 
@@ -112,9 +165,23 @@ where("patientId","==",uid)
 
 const ordonnanceSnap=await getDocs(ordonnanceQuery);
 
+let totalOrdonnances=ordonnanceSnap.size;
+
+if(nomPatient){
+
+const oTout=await getDocs(collection(db,"ordonnances"));
+
+oTout.forEach(d=>{
+
+if(!d.data().patientId && documentEstPourPatient(d.data(),uid,nomPatient)) totalOrdonnances++;
+
+});
+
+}
+
 document.getElementById("totalOrdonnances").textContent=
 
-ordonnanceSnap.size;
+totalOrdonnances;
 
 // Factures
 
@@ -128,9 +195,23 @@ where("patientId","==",uid)
 
 const factureSnap=await getDocs(factureQuery);
 
+let totalFactures=factureSnap.size;
+
+if(nomPatient){
+
+const fTout=await getDocs(collection(db,"factures"));
+
+fTout.forEach(d=>{
+
+if(!d.data().patientId && documentEstPourPatient(d.data(),uid,nomPatient)) totalFactures++;
+
+});
+
+}
+
 document.getElementById("totalFactures").textContent=
 
-factureSnap.size;
+totalFactures;
 
 // Notifications
 
@@ -156,6 +237,10 @@ notificationSnap.size;
 
 async function chargerProchainRendezvous(uid){
 
+// Priorité : patientId, sinon correspondance par nom
+const patientSnap=await getDoc(doc(db,"patients",uid));
+const nomPatient=patientSnap.exists()?patientSnap.data().nom:"";
+
 const rdvQuery=query(
 
 collection(db,"rendezvous"),
@@ -170,11 +255,40 @@ limit(1)
 
 const snap=await getDocs(rdvQuery);
 
+let prochain=null;
+
+if(!snap.empty){
+
+prochain=snap.docs[0].data();
+
+}else if(nomPatient){
+
+// Compat : documents sans patientId
+
+const tout=await getDocs(collection(db,"rendezvous"));
+
+const valides=tout.docs
+
+.map(d=>({id:d.id,data:d.data()}))
+
+.filter(d=>documentEstPourPatient(d.data,uid,nomPatient))
+
+.sort((a,b)=>String(a.data.date||"").localeCompare(String(b.data.date||"")));
+
+if(valides.length>0){
+
+prochain=valides[0].data;
+
+}
+
+}
+
+
 const container=document.getElementById("prochainRendezvous");
 
 container.innerHTML="";
 
-if(snap.empty){
+if(!prochain){
 
 container.innerHTML="<p>Aucun rendez-vous programmé.</p>";
 
@@ -182,27 +296,21 @@ return;
 
 }
 
-snap.forEach(doc=>{
-
-const rdv=doc.data();
-
 container.innerHTML=`
 
 <div class="rdv-card">
 
-<h3>${rdv.date}</h3>
+<h3>${escapeHtml(prochain.date)}</h3>
 
-<p><strong>Heure :</strong> ${rdv.heure}</p>
+<p><strong>Heure :</strong> ${escapeHtml(prochain.heure)}</p>
 
-<p><strong>Dentiste :</strong> ${rdv.dentiste}</p>
+<p><strong>Dentiste :</strong> ${escapeHtml(prochain.dentiste||"-")}</p>
 
-<p><strong>Statut :</strong> ${rdv.statut}</p>
+<p><strong>Statut :</strong> ${escapeHtml(prochain.statut||"En attente")}</p>
 
 </div>
 
 `;
-
-});
 
 }
 
@@ -263,11 +371,11 @@ container.innerHTML+=`
 
 <div class="notification-content">
 
-<h4>${notification.titre}</h4>
+<h4>${escapeHtml(notification.titre)}</h4>
 
-<p>${notification.message}</p>
+<p>${escapeHtml(notification.message)}</p>
 
-<small>${notification.date}</small>
+<small>${escapeHtml(notification.date)}</small>
 
 </div>
 
@@ -284,6 +392,9 @@ container.innerHTML+=`
 // ==========================================
 
 async function chargerHistorique(uid){
+
+const patientSnap=await getDoc(doc(db,"patients",uid));
+const nomPatient=patientSnap.exists()?patientSnap.data().nom:"";
 
 const historiqueQuery=query(
 
@@ -303,7 +414,37 @@ const tbody=document.getElementById("historiqueRendezvous");
 
 tbody.innerHTML="";
 
-if(snap.empty){
+
+// Liste complete : patientId + correspondance par nom
+
+let liste=snap.docs.map(d=>({id:d.id,data:d.data()}));
+
+
+if(nomPatient){
+
+const tout=await getDocs(collection(db,"rendezvous"));
+
+tout.docs.forEach(d=>{
+
+if(d.data().patientId!==uid && documentEstPourPatient(d.data(),uid,nomPatient)){
+
+liste.push({id:d.id,data:d.data()});
+
+}
+
+});
+
+}
+
+
+liste=liste
+
+.sort((a,b)=>String(b.data.date||"").localeCompare(String(a.data.date||"")))
+
+.slice(0,10);
+
+
+if(liste.length===0){
 
 tbody.innerHTML=`
 
@@ -323,25 +464,27 @@ return;
 
 }
 
-snap.forEach(doc=>{
+liste.forEach((item)=>{
 
-const rdv=doc.data();
+const rdv=item.data;
+
+const statut=(rdv.statut||"En attente").toLowerCase();
 
 tbody.innerHTML+=`
 
 <tr>
 
-<td>${rdv.date}</td>
+<td>${escapeHtml(rdv.date)}</td>
 
-<td>${rdv.heure}</td>
+<td>${escapeHtml(rdv.heure)}</td>
 
-<td>${rdv.dentiste}</td>
+<td>${escapeHtml(rdv.dentiste||"-")}</td>
 
 <td>
 
-<span class="status ${rdv.statut.toLowerCase()}">
+<span class="status ${statut}">
 
-${rdv.statut}
+${escapeHtml(rdv.statut||"En attente")}
 
 </span>
 
@@ -350,10 +493,8 @@ ${rdv.statut}
 <td>
 
 <button
-
 class="btn-primary"
-
-onclick="voirRendezVous('${doc.id}')">
+onclick="voirRendezVous('${item.id}')">
 
 Voir
 

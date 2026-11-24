@@ -843,3 +843,261 @@ CARDS & FORMS (ESPACE PATIENT)
   background: #0b5ed7;
   transform: translateY(-1px);
 }
+
+/* ===========================
+MODALES PATIENT
+=========================== */
+.modal {
+  display: none;
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(15, 23, 42, 0.55);
+  justify-content: center;
+  align-items: center;
+  z-index: 9999;
+  padding: 20px;
+}
+
+.modal.active {
+  display: flex;
+}
+
+.modal-content {
+  background: #ffffff;
+  width: 100%;
+  max-width: 520px;
+  border-radius: 18px;
+  box-shadow: 0 24px 60px rgba(15, 23, 42, 0.25);
+  overflow: hidden;
+  animation: modalZoom 0.3s ease;
+}
+
+.modal-content.modal-large {
+  max-width: 640px;
+}
+
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20px 26px;
+  border-bottom: 1px solid #eef2f7;
+}
+
+.modal-header h2,
+.modal-header h3 {
+  color: #0b2d57;
+  font-size: 1.15rem;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.modal-footer {
+  padding: 16px 26px;
+  border-top: 1px solid #eef2f7;
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+}
+
+.close {
+  background: none;
+  border: none;
+  font-size: 28px;
+  line-height: 1;
+  cursor: pointer;
+  color: #94a3b8;
+  transition: color 0.2s ease;
+}
+
+.close:hover {
+  color: #ef4444;
+}
+
+.modal .input-group,
+.modal .form-group {
+  margin-bottom: 16px;
+}
+
+.modal form label {
+  font-weight: 600;
+  font-size: 0.9rem;
+  color: #334155;
+  margin-bottom: 6px;
+  display: block;
+}
+
+.modal form input,
+.modal form select,
+.modal form textarea {
+  width: 100%;
+  padding: 12px 14px;
+  border: 1px solid #cbd5e1;
+  border-radius: 10px;
+  font-size: 0.95rem;
+  font-family: inherit;
+}
+
+.modal form input:focus,
+.modal form select:focus,
+.modal form textarea:focus {
+  outline: none;
+  border-color: #0d6efd;
+  box-shadow: 0 0 0 3px rgba(13, 110, 253, 0.12);
+}
+
+@keyframes modalZoom {
+  from {
+    opacity: 0;
+    transform: scale(0.9);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+/* ===========================
+AMELIORATIONS DESIGN PATIENT
+=========================== */
+.patient-sidebar {
+  box-shadow: 4px 0 24px rgba(15, 23, 42, 0.06);
+}
+
+.patient-topbar {
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border-bottom: 1px solid rgba(15, 23, 42, 0.06);
+}
+
+.patient-topbar .patient-user {
+  font-weight: 600;
+  color: #0b2d57;
+}
+
+.stat-card {
+  transition: transform 0.25s ease, box-shadow 0.25s ease;
+}
+
+.stat-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 18px 40px rgba(15, 23, 42, 0.1);
+}
+
+.rdv-card {
+  background: linear-gradient(135deg, #0d6efd, #0b5ed7);
+  color: #ffffff;
+  border-radius: 14px;
+  padding: 22px;
+}
+
+.rdv-card h3 {
+  color: #ffffff;
+  font-size: 1.4rem;
+  margin-bottom: 12px;
+}
+
+.rdv-card p {
+  margin: 6px 0;
+  color: rgba(255, 255, 255, 0.92);
+}
+
+.notification-card {
+  display: flex;
+  gap: 14px;
+  align-items: flex-start;
+}
+
+.notification-icon {
+  width: 42px;
+  height: 42px;
+  border-radius: 12px;
+  background: #e8f1ff;
+  color: #0d6efd;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.notification-content h4 {
+  color: #0b2d57;
+  margin-bottom: 4px;
+}
+
+.notification-content p {
+  color: #475569;
+  font-size: 0.9rem;
+}
+
+.notification-content small {
+  color: #94a3b8;
+}
+
+/* Status badges */
+.status {
+  display: inline-block;
+  padding: 4px 12px;
+  border-radius: 20px;
+  font-size: 0.78rem;
+  font-weight: 600;
+}
+
+.status.en-attente {
+  background: #fff4e5;
+  color: #b45309;
+}
+
+.status.accepte,
+.status.confirme {
+  background: #dcfce7;
+  color: #166534;
+}
+
+.status.refuse {
+  background: #fee2e2;
+  color: #b91c1c;
+}
+
+.status.annulé,
+.status.annule {
+  background: #eef2f7;
+  color: #475569;
+}
+
+.status.termine,
+.status.termine {
+  background: #e0e7ff;
+  color: #3730a3;
+}
+
+/* Boutons d'action */
+.btn-secondary {
+  background: #eef2f7;
+  color: #0b2d57;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 8px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s ease, transform 0.2s ease;
+}
+
+.btn-secondary:hover {
+  background: #e2e8f0;
+  transform: translateY(-1px);
+}
+
+/* Responsive modales */
+@media (max-width: 600px) {
+  .modal-content,
+  .modal-content.modal-large {
+    max-width: 100%;
+    margin: 0;
+  }
+}

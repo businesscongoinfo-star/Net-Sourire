@@ -22,10 +22,23 @@ onSnapshot
 } from "https://www.gstatic.com/firebasejs/12.0.0/firebase-firestore.js";
 
 // ==========================================
-// VARIABLES
+// VARIABLES (contexte détecté)
 // ==========================================
 
+// Mode dashboard : contenu dynamique dans #pageContent
+// Mode standalone : table #facturesTable + modales fixes du HTML
 const pageContent = document.getElementById("pageContent");
+const estStandalone = !pageContent;
+
+// Échappement anti-XSS
+function escapeHtml(valeur){
+return String(valeur ?? "")
+.replace(/&/g,"&amp;")
+.replace(/</g,"&lt;")
+.replace(/>/g,"&gt;")
+.replace(/"/g,"&quot;")
+.replace(/'/g,"&#39;");
+}
 
 // ==========================================
 // MENU FACTURES
@@ -36,7 +49,6 @@ const factureBtn = document.getElementById("factureBtn");
 if(factureBtn){
 
 factureBtn.addEventListener("click",(e)=>{
-
 e.preventDefault();
 
 ouvrirModuleFactures();
@@ -50,6 +62,15 @@ ouvrirModuleFactures();
 // ==========================================
 
 export async function ouvrirModuleFactures(){
+
+if(estStandalone){
+
+// Page facture.html : la table existe déjà, on ne fait que la charger
+chargerFactures();
+
+return;
+
+}
 
 pageContent.innerHTML=`
 
@@ -104,9 +125,16 @@ chargerFactures();
 
 async function chargerFactures(){
 
+const tbody=document.getElementById("facturesTable");
+
+if(!tbody) return;
+
+// En mode dashboard, le gabarit est créé dynamiquement dans #listeFactures
+if(!estStandalone){
+
 const zone=document.getElementById("listeFactures");
 
-if(!zone) return;
+if(zone){
 
 zone.innerHTML=`
 
@@ -142,16 +170,16 @@ zone.innerHTML=`
 
 `;
 
-const tbody=document.getElementById("facturesTable");
+}
+
+}
+
 
 const snapshot=await getDocs(
 
 query(
-
 collection(db,"factures"),
-
 orderBy("dateCreation","desc")
-
 )
 
 );
@@ -166,17 +194,17 @@ tbody.innerHTML+=`
 
 <tr>
 
-<td>${data.numero || "-"}</td>
+<td>${escapeHtml(data.numero || "-")}</td>
 
-<td>${data.patient || "-"}</td>
+<td>${escapeHtml(data.patient || "-")}</td>
 
-<td>${data.service || "-"}</td>
+<td>${escapeHtml(data.service || "-")}</td>
 
 <td>${Number(data.montant || 0).toLocaleString()} FCFA</td>
 
-<td>${data.modePaiement || "-"}</td>
+<td>${escapeHtml(data.modePaiement || data.paiement || "-")}</td>
 
-<td>${data.date || "-"}</td>
+<td>${escapeHtml(data.date || "-")}</td>
 
 <td>
 
@@ -237,9 +265,7 @@ Aucune facture enregistrée.
 // ==========================================
 
 onSnapshot(
-
 collection(db,"factures"),
-
 ()=>{
 
 const table=document.getElementById("facturesTable");
@@ -264,7 +290,7 @@ chargerFactures();
 
 document.addEventListener("click",(e)=>{
 
-if(e.target.id==="btnNouvelleFacture"){
+if(e.target.id==="btnNouvelleFacture" || e.target.id==="btnNouvelleFactureStandalone"){
 
 ouvrirFormulaireFacture();
 
@@ -277,6 +303,17 @@ ouvrirFormulaireFacture();
 // ==========================================
 
 function ouvrirFormulaireFacture(){
+
+if(estStandalone){
+
+// La page facture.html possède déjà #factureModal et #factureForm
+const modal=document.getElementById("factureModal");
+
+if(modal) modal.style.display="flex";
+
+return;
+
+}
 
 pageContent.innerHTML=`
 
@@ -292,7 +329,7 @@ pageContent.innerHTML=`
 
 </div>
 
-<form id="factureForm">
+<form id="factureFormDynamique">
 
 <input
 type="text"
@@ -357,7 +394,7 @@ class="btn btn-warning">
 `;
 
 document
-.getElementById("factureForm")
+.getElementById("factureFormDynamique")
 .addEventListener("submit",enregistrerFacture);
 
 document
@@ -396,8 +433,41 @@ async function enregistrerFacture(e){
 
 e.preventDefault();
 
-const numero=
+let patient="",telephone="",service="",montant=0,modePaiement="Espèces",observation="";
 
+if(estStandalone){
+
+// Champs de facture.html
+patient=document.getElementById("patientNom").value.trim();
+
+telephone=document.getElementById("patientTelephone").value.trim();
+
+service=document.getElementById("service").value.trim();
+
+montant=Number(document.getElementById("montant").value);
+
+modePaiement=document.getElementById("modePaiement").value;
+
+observation=document.getElementById("observation").value.trim();
+
+}else{
+
+patient=document.getElementById("patient").value.trim();
+
+telephone=document.getElementById("telephone").value.trim();
+
+service=document.getElementById("service").value.trim();
+
+montant=Number(document.getElementById("montant").value);
+
+modePaiement=document.getElementById("modePaiement").value;
+
+observation=document.getElementById("observation").value.trim();
+
+}
+
+
+const numero=
 await genererNumeroFacture();
 
 await addDoc(
@@ -406,19 +476,21 @@ collection(db,"factures"),
 
 {
 
-numero,
+numero:numero,
 
-patient:patient.value,
+patient:patient,
 
-telephone:telephone.value,
+telephone:telephone,
 
-service:service.value,
+service:service,
 
-montant:Number(montant.value),
+montant:montant,
 
-modePaiement:modePaiement.value,
+modePaiement:modePaiement,
 
-observation:observation.value,
+paiement:modePaiement,
+
+observation:observation,
 
 date:new Date().toLocaleDateString(),
 
@@ -430,7 +502,22 @@ dateCreation:serverTimestamp()
 
 alert("✅ Facture enregistrée.");
 
+if(estStandalone){
+
+fermerModalStandalone("factureModal");
+
+}
+
 ouvrirModuleFactures();
+
+}
+
+// Ferme un modal en mode standalone
+function fermerModalStandalone(id){
+
+const modal=document.getElementById(id);
+
+if(modal) modal.style.display="none";
 
 }
 
@@ -462,13 +549,76 @@ return;
 
 const f = snap.data();
 
+if(estStandalone){
+
+// Afficher dans la modale #factureDetails
+const zone=document.getElementById("factureInfo");
+
+if(zone){
+
+zone.innerHTML=`
+
+<div class="facture">
+
+<h3>Cabinet Dentaire Net Sourire</h3>
+
+<hr>
+
+<p><strong>N° Facture :</strong> ${escapeHtml(f.numero)}</p>
+
+<p><strong>Patient :</strong> ${escapeHtml(f.patient)}</p>
+
+<p><strong>Téléphone :</strong> ${escapeHtml(f.telephone || "-")}</p>
+
+<p><strong>Service :</strong> ${escapeHtml(f.service)}</p>
+
+<p><strong>Montant :</strong> ${Number(f.montant).toLocaleString()} FCFA</p>
+
+<p><strong>Mode de paiement :</strong> ${escapeHtml(f.modePaiement || f.paiement || "-")}</p>
+
+<p><strong>Date :</strong> ${escapeHtml(f.date)}</p>
+
+<p><strong>Observation :</strong> ${escapeHtml(f.observation || "-")}</p>
+
+<br>
+
+<button
+class="btn btn-success"
+onclick="imprimerFacture('${id}')">
+
+🖨 Imprimer
+
+</button>
+
+<button
+class="btn btn-primary"
+onclick="envoyerWhatsAppFacture('${id}')">
+
+💬 WhatsApp
+
+</button>
+
+</div>
+
+`;
+
+}
+
+const modal=document.getElementById("factureDetails");
+
+if(modal) modal.style.display="flex";
+
+return;
+
+}
+
 pageContent.innerHTML = `
 
 <section class="dashboard-box">
 
 <div class="box-header">
 
-<h2>🧾 Facture ${f.numero}</h2>
+<h2>🧾 Facture ${escapeHtml(f.numero)}</h2>
 
 </div>
 
@@ -478,21 +628,21 @@ pageContent.innerHTML = `
 
 <hr>
 
-<p><strong>N° Facture :</strong> ${f.numero}</p>
+<p><strong>N° Facture :</strong> ${escapeHtml(f.numero)}</p>
 
-<p><strong>Patient :</strong> ${f.patient}</p>
+<p><strong>Patient :</strong> ${escapeHtml(f.patient)}</p>
 
-<p><strong>Téléphone :</strong> ${f.telephone}</p>
+<p><strong>Téléphone :</strong> ${escapeHtml(f.telephone || "-")}</p>
 
-<p><strong>Service :</strong> ${f.service}</p>
+<p><strong>Service :</strong> ${escapeHtml(f.service)}</p>
 
 <p><strong>Montant :</strong> ${Number(f.montant).toLocaleString()} FCFA</p>
 
-<p><strong>Mode de paiement :</strong> ${f.modePaiement}</p>
+<p><strong>Mode de paiement :</strong> ${escapeHtml(f.modePaiement || f.paiement || "-")}</p>
 
-<p><strong>Date :</strong> ${f.date}</p>
+<p><strong>Date :</strong> ${escapeHtml(f.date)}</p>
 
-<p><strong>Observation :</strong> ${f.observation || "-"}</p>
+<p><strong>Observation :</strong> ${escapeHtml(f.observation || "-")}</p>
 
 <br>
 
@@ -596,13 +746,21 @@ const f = snap.data();
 
 const w = window.open("","_blank");
 
+if(!w){
+
+alert("Veuillez autoriser les fenêtres pop-up pour imprimer.");
+
+return;
+
+}
+
 w.document.write(`
 
 <html>
 
 <head>
 
-<title>Facture ${f.numero}</title>
+<title>Facture ${escapeHtml(f.numero)}</title>
 
 <style>
 
@@ -652,17 +810,17 @@ border-bottom:1px solid #ddd;
 
 <table>
 
-<tr><td>Numéro</td><td>${f.numero}</td></tr>
+<tr><td>Numéro</td><td>${escapeHtml(f.numero)}</td></tr>
 
-<tr><td>Patient</td><td>${f.patient}</td></tr>
+<tr><td>Patient</td><td>${escapeHtml(f.patient)}</td></tr>
 
-<tr><td>Service</td><td>${f.service}</td></tr>
+<tr><td>Service</td><td>${escapeHtml(f.service)}</td></tr>
 
 <tr><td>Montant</td><td>${Number(f.montant).toLocaleString()} FCFA</td></tr>
 
-<tr><td>Paiement</td><td>${f.modePaiement}</td></tr>
+<tr><td>Paiement</td><td>${escapeHtml(f.modePaiement || f.paiement)}</td></tr>
 
-<tr><td>Date</td><td>${f.date}</td></tr>
+<tr><td>Date</td><td>${escapeHtml(f.date)}</td></tr>
 
 </table>
 
@@ -819,9 +977,7 @@ total.innerHTML = snapshot.size;
 // ===============================
 
 onSnapshot(
-
 collection(db,"factures"),
-
 ()=>{
 
 const table = document.getElementById("facturesTable");
@@ -894,15 +1050,15 @@ window.rapportJournalier = async function(){
 
 const snapshot=await getDocs(collection(db,"factures"));
 
-const aujourdhui=new Date().toLocaleDateString();
-
 let total=0;
+
+const maintenant=new Date();
 
 snapshot.forEach((docu)=>{
 
 const data=docu.data();
 
-if(data.date===aujourdhui){
+if(data.date && data.date===maintenant.toLocaleDateString()){
 
 total+=Number(data.montant||0);
 
@@ -930,9 +1086,11 @@ const snapshot=await getDocs(collection(db,"factures"));
 
 let total=0;
 
-const mois=new Date().getMonth()+1;
+const maintenant=new Date();
 
-const annee=new Date().getFullYear();
+const mois=maintenant.getMonth()+1;
+
+const annee=maintenant.getFullYear();
 
 snapshot.forEach((docu)=>{
 
@@ -983,9 +1141,7 @@ const blob=new Blob(
 [JSON.stringify(facture,null,2)],
 
 {
-
 type:"application/json"
-
 }
 
 );
@@ -1015,11 +1171,8 @@ zone.innerHTML="";
 const snapshot=await getDocs(
 
 query(
-
 collection(db,"factures"),
-
 orderBy("dateCreation","desc")
-
 )
 
 );
@@ -1042,9 +1195,9 @@ zone.innerHTML+=`
 
 <div>
 
-<h4>${f.numero}</h4>
+<h4>${escapeHtml(f.numero)}</h4>
 
-<p>${f.patient}</p>
+<p>${escapeHtml(f.patient)}</p>
 
 </div>
 
@@ -1079,6 +1232,31 @@ compteurFactures();
 dernieresFactures();
 
 });
+
+// Fermetures de modales sur la page standalone facture.html
+if(estStandalone){
+
+const croixFacture=document.getElementById("closeFactureModal");
+
+if(croixFacture) croixFacture.addEventListener("click",()=>fermerModalStandalone("factureModal"));
+
+
+const annulerFacture=document.getElementById("annulerFacture");
+
+if(annulerFacture) annulerFacture.addEventListener("click",()=>fermerModalStandalone("factureModal"));
+
+
+const croixDetails=document.getElementById("closeFactureDetails");
+
+if(croixDetails) croixDetails.addEventListener("click",()=>fermerModalStandalone("factureDetails"));
+
+
+// Câblage du formulaire de la page standalone
+const form=document.getElementById("factureForm");
+
+if(form) form.addEventListener("submit",enregistrerFacture);
+
+}
 
 // ==========================================
 // FIN DU MODULE FACTURES

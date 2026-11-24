@@ -7,12 +7,15 @@ NET SOURIRE
 :root{
 --primary:#0d6efd;
 --primary-dark:#0b5ed7;
+--primary-soft:#e8f1ff;
+--accent:#00b3a4;
 --bg:#f5f8fc;
 --surface:#ffffff;
 --text:#1e293b;
 --muted:#64748b;
 --radius:16px;
 --shadow:0 12px 32px rgba(15,23,42,.08);
+--shadow-lg:0 24px 60px rgba(15,23,42,.12);
 }
 
 *{
@@ -105,6 +108,44 @@ display:flex;
 gap:10px;
 align-items:center;
 flex-shrink:0;
+}
+
+.burger{
+display:none;
+background:transparent;
+border:none;
+font-size:24px;
+color:#0b2d57;
+cursor:pointer;
+padding:6px;
+z-index:1000;
+}
+
+/* ===========================
+MENU MOBILE
+=========================== */
+nav.mobile-open ul{
+display:flex !important;
+flex-direction:column;
+position:fixed;
+top:90px;
+left:0;
+right:0;
+background:#fff;
+padding:24px;
+gap:18px;
+box-shadow:0 16px 40px rgba(0,0,0,.12);
+border-top:1px solid rgba(15,23,42,.06);
+}
+
+nav.mobile-open ul li{
+width:100%;
+}
+
+nav.mobile-open ul li a{
+display:block;
+padding:10px 4px;
+font-size:16px;
 }
 
 .btn-admin{
@@ -892,6 +933,18 @@ RESPONSIVE
 @media(max-width:992px){
 
 nav{
+
+display:none;
+
+}
+
+.burger{
+
+display:block;
+
+}
+
+.actions .btn-admin{
 
 display:none;
 

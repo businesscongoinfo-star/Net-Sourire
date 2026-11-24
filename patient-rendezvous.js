@@ -26,6 +26,27 @@ serverTimestamp
 // VARIABLES
 // ==========================================
 
+// ==========================================
+// FONCTION D'ECLAPPEMENT ANTI-XSS
+// ==========================================
+
+function escapeHtml(valeur){
+
+return String(valeur ?? "")
+
+.replace(/&/g,"&amp;")
+
+.replace(/</g,"&lt;")
+
+.replace(/>/g,"&gt;")
+
+.replace(/"/g,"&quot;")
+
+.replace(/'/g,"&#39;");
+
+}
+
+
 const form=document.getElementById("rendezvousForm");
 
 const table=document.getElementById("rendezvousTable");
@@ -39,6 +60,13 @@ const btnFermer=document.getElementById("closeModal");
 const btnAnnuler=document.getElementById("annulerRendezvous");
 
 let patient=null;
+
+// Champs du formulaire
+const champDate=document.getElementById("date");
+const champHeure=document.getElementById("heure");
+const champDentiste=document.getElementById("dentiste");
+const champMotif=document.getElementById("motif");
+const champType=document.getElementById("typeConsultation");
 
 // ==========================================
 // AUTHENTIFICATION
@@ -58,6 +86,15 @@ patient=user;
 
 chargerRendezVous();
 
+// Si on arrive avec ?id=... (depuis le dashboard), afficher les details
+const params=new URLSearchParams(window.location.search);
+const idParam=params.get("id");
+if(idParam){
+
+window.voirRendezVous(idParam);
+
+}
+
 });
 
 // ==========================================
@@ -66,19 +103,19 @@ chargerRendezVous();
 
 btnNouveau?.addEventListener("click",()=>{
 
-modal.style.display="flex";
+modal.classList.add("active");
 
 });
 
 btnFermer?.addEventListener("click",()=>{
 
-modal.style.display="none";
+modal.classList.remove("active");
 
 });
 
 btnAnnuler?.addEventListener("click",()=>{
 
-modal.style.display="none";
+modal.classList.remove("active");
 
 });
 
@@ -86,7 +123,7 @@ window.addEventListener("click",(e)=>{
 
 if(e.target===modal){
 
-modal.style.display="none";
+modal.classList.remove("active");
 
 }
 
@@ -122,15 +159,15 @@ patientNom:patient.displayName || "",
 
 patientEmail:patient.email,
 
-date:date.value,
+date:champDate.value,
 
-heure:heure.value,
+heure:champHeure.value,
 
-dentiste:dentiste.value,
+dentiste:champDentiste.value,
 
-typeConsultation:typeConsultation.value,
+typeConsultation:champType.value,
 
-motif:motif.value,
+motif:champMotif.value,
 
 statut:"En attente",
 
@@ -142,7 +179,7 @@ dateCreation:serverTimestamp()
 
 form.reset();
 
-modal.style.display="none";
+modal.classList.remove("active");
 
 alert("✅ Votre demande de rendez-vous a été envoyée.");
 
@@ -223,19 +260,19 @@ table.innerHTML+=`
 
 <tr>
 
-<td>${rdv.date}</td>
+<td>${escapeHtml(rdv.date)}</td>
 
-<td>${rdv.heure}</td>
+<td>${escapeHtml(rdv.heure)}</td>
 
-<td>${rdv.dentiste || "-"}</td>
+<td>${escapeHtml(rdv.dentiste || "-")}</td>
 
-<td>${rdv.motif}</td>
+<td>${escapeHtml(rdv.motif)}</td>
 
 <td>
 
-<span class="status ${rdv.statut.toLowerCase().replace(/\s/g,'-')}">
+<span class="status ${escapeHtml(rdv.statut ? rdv.statut.toLowerCase().replace(/\s/g,'-') : "en-attente")}">
 
-${rdv.statut}
+${escapeHtml(rdv.statut)}
 
 </span>
 
@@ -320,23 +357,23 @@ info.innerHTML = `
 
 <div class="details-card">
 
-<h3>${rdv.typeConsultation}</h3>
+<h3>${escapeHtml(rdv.typeConsultation)}</h3>
 
 <hr>
 
-<p><strong>📅 Date :</strong> ${rdv.date}</p>
+<p><strong>📅 Date :</strong> ${escapeHtml(rdv.date)}</p>
 
-<p><strong>🕒 Heure :</strong> ${rdv.heure}</p>
+<p><strong>🕒 Heure :</strong> ${escapeHtml(rdv.heure)}</p>
 
-<p><strong>👨‍⚕️ Dentiste :</strong> ${rdv.dentiste || "À définir"}</p>
+<p><strong>👨‍⚕️ Dentiste :</strong> ${escapeHtml(rdv.dentiste || "À définir")}</p>
 
-<p><strong>📝 Motif :</strong> ${rdv.motif}</p>
+<p><strong>📝 Motif :</strong> ${escapeHtml(rdv.motif)}</p>
 
 <p><strong>📌 Statut :</strong>
 
-<span class="status ${rdv.statut.toLowerCase().replace(/\s/g,'-')}">
+<span class="status ${escapeHtml(rdv.statut ? rdv.statut.toLowerCase().replace(/\s/g,'-') : "en-attente")}">
 
-${rdv.statut}
+${escapeHtml(rdv.statut)}
 
 </span>
 
@@ -346,7 +383,7 @@ ${rdv.statut}
 
 `;
 
-document.getElementById("rendezvousDetails").style.display="flex";
+document.getElementById("rendezvousDetails").classList.add("active");
 
 };
 
@@ -356,7 +393,7 @@ document.getElementById("rendezvousDetails").style.display="flex";
 
 document.getElementById("closeDetails")?.addEventListener("click",()=>{
 
-document.getElementById("rendezvousDetails").style.display="none";
+document.getElementById("rendezvousDetails").classList.remove("active");
 
 });
 
@@ -433,7 +470,7 @@ const details=document.getElementById("rendezvousDetails");
 
 if(e.target===details){
 
-details.style.display="none";
+details.classList.remove("active");
 
 }
 
