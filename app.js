@@ -108,3 +108,41 @@ if (burger && nav) {
   });
 }
 
+// HEADER : effet au scroll
+const headerEl = document.querySelector("header");
+window.addEventListener("scroll", () => {
+  if (!headerEl) return;
+  if (window.scrollY > 12) {
+    headerEl.classList.add("scrolled");
+  } else {
+    headerEl.classList.remove("scrolled");
+  }
+});
+
+// RÉVÉLATION DES SECTIONS au scroll
+const revealTargets = document.querySelectorAll(
+  ".service-card, .doctor-card, .gallery-card, .before-card, .testimonial-card, .contact-card, .patient-card"
+);
+
+if ("IntersectionObserver" in window) {
+  const revealObserver = new IntersectionObserver(
+    (entries) => {
+      entries.forEach((entry) => {
+        if (entry.isIntersecting) {
+          entry.target.style.opacity = "1";
+          entry.target.style.transform = "translateY(0)";
+          revealObserver.unobserve(entry.target);
+        }
+      });
+    },
+    { threshold: 0.12 }
+  );
+
+  revealTargets.forEach((el) => {
+    el.style.opacity = "0";
+    el.style.transform = "translateY(28px)";
+    el.style.transition = "opacity 0.7s ease, transform 0.7s cubic-bezier(0.22, 1, 0.36, 1)";
+    revealObserver.observe(el);
+  });
+}
+
